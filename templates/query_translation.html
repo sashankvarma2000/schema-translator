@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Query Translation{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Multi-Table Query Translation</h1>
+    <p class="lead">Demonstrate sophisticated LLM reasoning about database relationships and query translation.</p>
+
+    {% if not dashboard.query_translation_available %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        Query translation is not available. Please ensure OPENAI_API_KEY is set.
+    </div>
+    {% else %}
+
+    <!-- Customer Selection -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <label for="customerSelect" class="form-label">Select Customer Schema:</label>
+            <select class="form-select" id="customerSelect">
+                <option value="customer_a">Customer A - Single Table Schema</option>
+                <option value="customer_b">Customer B - Multi-Table Split (Headers, Status, Renewal)</option>
+                <option value="customer_c">Customer C - Multi-Table Split (Master, Details, Lifecycle)</option>
+            </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-info" id="analyzeRelationshipsBtn">
+                <i class="fas fa-sitemap"></i> Analyze Relationships
+            </button>
+        </div>
+    </div>
+
+    <!-- Query Input -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <label for="canonicalQuery" class="form-label">Canonical Query (Standardized):</label>
+            <textarea class="form-control" id="canonicalQuery" rows="3" placeholder="Enter your standardized query here...">SELECT contract_id, status, value FROM contracts WHERE status = 'active'</textarea>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-primary" id="translateQueryBtn">
+                <i class="fas fa-language"></i> Translate Query
+            </button>
+        </div>
+    </div>
+
+    <!-- Demo Queries -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5>Demo Queries</h5>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDemoQuery('simple')">Simple</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDemoQuery('complex')">Complex</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDemoQuery('aggregation')">Aggregation</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDemoQuery('filter')">Complex Filter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="translationResults" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Translation Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Original Query:</h6>
+                        <pre class="bg-light p-2 rounded" id="originalQuery"></pre>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Translated Query:</h6>
+                        <pre class="bg-light p-2 rounded" id="translatedQuery"></pre>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Confidence Score:</h6>
+                        <div class="progress">
+                            <div class="progress-bar" id="confidenceBar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="confidenceText">0%</small>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Performance Score:</h6>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" id="performanceBar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="performanceText">0%</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>Reasoning:</h6>
+                    <p id="reasoning" class="text-muted"></p>
+                </div>
+                
+                <div id="warnings" style="display: none;">
+                    <h6>Warnings:</h6>
+                    <ul id="warningsList"></ul>
+                </div>
+                
+                <div id="optimizations" style="display: none;">
+                    <h6>Performance Optimizations:</h6>
+                    <ul id="optimizationsList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relationships Analysis -->
+    <div id="relationshipsResults" style="display: none;">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Table Relationships</h5>
+            </div>
+            <div class="card-body">
+                <div id="relationshipsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schema Information -->
+    <div class="row">
+        <div class="col-12">
+            <h5>Customer Schema Information</h5>
+            <div id="schemaInfo" class="card">
+                <div class="card-body">
+                    <div id="schemaContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const customerSelect = document.getElementById('customerSelect');
+    const canonicalQuery = document.getElementById('canonicalQuery');
+    const translateBtn = document.getElementById('translateQueryBtn');
+    const analyzeBtn = document.getElementById('analyzeRelationshipsBtn');
+    
+    // Load customer schema info on selection change
+    customerSelect.addEventListener('change', function() {
+        loadCustomerSchema(this.value);
+    });
+    
+    // Translate query
+    translateBtn.addEventListener('click', function() {
+        translateQuery();
+    });
+    
+    // Analyze relationships
+    analyzeBtn.addEventListener('click', function() {
+        analyzeRelationships();
+    });
+    
+    // Load initial schema
+    loadCustomerSchema(customerSelect.value);
+});
+
+function loadDemoQuery(type) {
+    const queries = {
+        'simple': "SELECT contract_id, status FROM contracts WHERE status = 'active'",
+        'complex': "SELECT contract_id, status, value, expiry_date FROM contracts WHERE status = 'active' AND value > 100000",
+        'aggregation': "SELECT status, COUNT(*), AVG(value) FROM contracts GROUP BY status",
+        'filter': "SELECT * FROM contracts WHERE expiry_date > '2025-01-01' AND value > 100000 AND contract_type = 'service'"
+    };
+    
+    document.getElementById('canonicalQuery').value = queries[type] || queries['simple'];
+}
+
+function loadCustomerSchema(customerId) {
+    fetch(`/api/query-translation/customer-schemas`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('schemaContent').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            const schema = data[customerId];
+            if (schema) {
+                let html = `<h6>${schema.description}</h6>`;
+                html += '<div class="row">';
+                
+                for (const [tableName, tableInfo] of Object.entries(schema.tables)) {
+                    html += `<div class="col-md-4 mb-3">`;
+                    html += `<div class="card">`;
+                    html += `<div class="card-header"><strong>${tableName}</strong></div>`;
+                    html += `<div class="card-body">`;
+                    html += `<p class="card-text">${tableInfo.description}</p>`;
+                    html += `<h6>Columns:</h6>`;
+                    html += `<ul class="list-unstyled">`;
+                    
+                    for (const [colName, colInfo] of Object.entries(tableInfo.columns)) {
+                        const flags = [];
+                        if (colInfo.is_primary_key) flags.push('PK');
+                        if (colInfo.is_foreign_key) flags.push('FK');
+                        if (!colInfo.nullable) flags.push('NOT NULL');
+                        
+                        const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
+                        html += `<li><code>${colName}</code> (${colInfo.type})${flagStr}</li>`;
+                    }
+                    
+                    html += `</ul></div></div></div>`;
+                }
+                
+                html += '</div>';
+                document.getElementById('schemaContent').innerHTML = html;
+            }
+        })
+        .catch(error => {
+            document.getElementById('schemaContent').innerHTML = `<div class="alert alert-danger">Error loading schema: ${error.message}</div>`;
+        });
+}
+
+function translateQuery() {
+    const query = document.getElementById('canonicalQuery').value;
+    const customerId = document.getElementById('customerSelect').value;
+    
+    if (!query.trim()) {
+        alert('Please enter a query to translate');
+        return;
+    }
+    
+    const translateBtn = document.getElementById('translateQueryBtn');
+    translateBtn.disabled = true;
+    translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Translating...';
+    
+    fetch('/api/query-translation/translate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            query: query,
+            customer_id: customerId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        translateBtn.disabled = false;
+        translateBtn.innerHTML = '<i class="fas fa-language"></i> Translate Query';
+        
+        if (data.error) {
+            alert('Translation failed: ' + data.error);
+            return;
+        }
+        
+        // Display results
+        document.getElementById('originalQuery').textContent = data.original_query;
+        document.getElementById('translatedQuery').textContent = data.translated_query;
+        document.getElementById('reasoning').textContent = data.reasoning;
+        
+        // Update confidence bar
+        const confidence = Math.round(data.confidence * 100);
+        document.getElementById('confidenceBar').style.width = confidence + '%';
+        document.getElementById('confidenceText').textContent = confidence + '%';
+        
+        // Update performance bar (mock calculation)
+        const performance = Math.min(100, Math.round(data.confidence * 100 + 20));
+        document.getElementById('performanceBar').style.width = performance + '%';
+        document.getElementById('performanceText').textContent = performance + '%';
+        
+        // Show warnings
+        if (data.warnings && data.warnings.length > 0) {
+            const warningsList = document.getElementById('warningsList');
+            warningsList.innerHTML = '';
+            data.warnings.forEach(warning => {
+                const li = document.createElement('li');
+                li.textContent = warning;
+                warningsList.appendChild(li);
+            });
+            document.getElementById('warnings').style.display = 'block';
+        } else {
+            document.getElementById('warnings').style.display = 'none';
+        }
+        
+        // Show optimizations
+        if (data.performance_optimization && data.performance_optimization.length > 0) {
+            const optimizationsList = document.getElementById('optimizationsList');
+            optimizationsList.innerHTML = '';
+            data.performance_optimization.forEach(opt => {
+                const li = document.createElement('li');
+                li.textContent = opt;
+                optimizationsList.appendChild(li);
+            });
+            document.getElementById('optimizations').style.display = 'block';
+        } else {
+            document.getElementById('optimizations').style.display = 'none';
+        }
+        
+        document.getElementById('translationResults').style.display = 'block';
+    })
+    .catch(error => {
+        translateBtn.disabled = false;
+        translateBtn.innerHTML = '<i class="fas fa-language"></i> Translate Query';
+        alert('Translation failed: ' + error.message);
+    });
+}
+
+function analyzeRelationships() {
+    const customerId = document.getElementById('customerSelect').value;
+    
+    const analyzeBtn = document.getElementById('analyzeRelationshipsBtn');
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    
+    fetch(`/api/query-translation/relationships/${customerId}`)
+        .then(response => response.json())
+        .then(data => {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-sitemap"></i> Analyze Relationships';
+            
+            if (data.error) {
+                alert('Relationship analysis failed: ' + data.error);
+                return;
+            }
+            
+            let html = `<h6>Discovered ${data.relationships.length} relationships:</h6>`;
+            
+            if (data.relationships.length === 0) {
+                html += '<p class="text-muted">No relationships discovered.</p>';
+            } else {
+                html += '<div class="table-responsive">';
+                html += '<table class="table table-sm">';
+                html += '<thead><tr><th>Table 1</th><th>Column 1</th><th>Table 2</th><th>Column 2</th><th>Type</th><th>Confidence</th><th>Reasoning</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.relationships.forEach(rel => {
+                    const confidenceClass = rel.confidence > 0.8 ? 'text-success' : rel.confidence > 0.6 ? 'text-warning' : 'text-danger';
+                    html += `<tr>`;
+                    html += `<td><code>${rel.table1}</code></td>`;
+                    html += `<td><code>${rel.column1}</code></td>`;
+                    html += `<td><code>${rel.table2}</code></td>`;
+                    html += `<td><code>${rel.column2}</code></td>`;
+                    html += `<td><span class="badge bg-info">${rel.relationship_type}</span></td>`;
+                    html += `<td><span class="${confidenceClass}">${Math.round(rel.confidence * 100)}%</span></td>`;
+                    html += `<td><small>${rel.reasoning}</small></td>`;
+                    html += `</tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+            }
+            
+            document.getElementById('relationshipsContent').innerHTML = html;
+            document.getElementById('relationshipsResults').style.display = 'block';
+        })
+        .catch(error => {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-sitemap"></i> Analyze Relationships';
+            alert('Relationship analysis failed: ' + error.message);
+        });
+}
+</script>
+{% endblock %}

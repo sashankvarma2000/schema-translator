@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natural Language Query - Schema Translator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #667eea;
+            --primary-purple: #764ba2;
+            --success-green: #28a745;
+            --warning-orange: #ffc107;
+            --danger-red: #dc3545;
+            --light-gray: #f8f9fa;
+            --border-color: #e9ecef;
+            --text-muted: #6c757d;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        /* Question Input Section - Always Visible */
+        .question-section {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .question-section:hover {
+            box-shadow: var(--shadow-hover);
+        }
+
+        .question-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .question-input {
+            width: 100%;
+            min-height: 100px;
+            border: 2px solid var(--border-color);
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 16px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .question-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .question-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .suggestion-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 10px 0;
+        }
+
+        .example-tags {
+            margin: 15px 0;
+        }
+
+        .example-tag {
+            display: inline-block;
+            background: var(--light-gray);
+            color: #4a5568;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .example-tag:hover {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+            transform: translateY(-1px);
+        }
+
+        .analyze-btn {
+            background: linear-gradient(45deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Progressive Sections */
+        .progressive-section {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .progressive-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .progressive-section.hide {
+            opacity: 0;
+            transform: translateY(-20px);
+            margin-bottom: 0;
+            height: 0;
+            padding: 0;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-text {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-container {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(45deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .progress-percentage {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Understanding Section */
+        .understanding-section {
+            padding: 30px;
+        }
+
+        .understanding-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .understanding-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .confidence-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .confidence-high { background: #c6f6d5; color: #22543d; }
+        .confidence-medium { background: #fef5e7; color: #c05621; }
+        .confidence-low { background: #fed7d7; color: #c53030; }
+
+        .understanding-details {
+            margin: 20px 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 120px;
+        }
+
+        .detail-value {
+            color: #2d3748;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 2px solid var(--border-color);
+            color: #4a5568;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        /* SQL Section */
+        .sql-section {
+            padding: 30px;
+        }
+
+        .sql-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .sql-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .copy-btn {
+            background: var(--light-gray);
+            border: 1px solid var(--border-color);
+            color: #4a5568;
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .sql-code {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 25px;
+            border-radius: 15px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .sql-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .final-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-success {
+            background: var(--success-green);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .action-buttons,
+            .final-actions {
+                flex-direction: column;
+            }
+            
+            .sql-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        /* Loading Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Smooth Animations */
+        * {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Natural Language to SQL Query</h1>
+            <p>Ask questions about your contract data in plain English</p>
+        </div>
+
+        <!-- Question Input Section - Always Visible -->
+        <div class="question-section">
+            <div class="question-label">What would you like to know?</div>
+            <textarea 
+                id="questionInput" 
+                class="question-input" 
+                placeholder="Show me active contracts over $100K..."
+                rows="3"
+            >Show me all active contracts</textarea>
+            
+            <div class="suggestion-text">
+                Try: "Which contracts expire next month?"
+            </div>
+            
+            <div class="example-tags">
+                <span class="example-tag" data-query="Show me all active contracts">Active contracts</span>
+                <span class="example-tag" data-query="Which contracts expire next month?">Expiring soon</span>
+                <span class="example-tag" data-query="Show contracts worth more than $500,000">High value</span>
+                <span class="example-tag" data-query="Find contracts with Microsoft">By supplier</span>
+            </div>
+            
+            <button id="analyzeBtn" class="analyze-btn">
+                Analyze Question
+            </button>
+        </div>
+
+        <!-- Progress Section - Appears after analyze click -->
+        <div id="progressSection" class="progressive-section">
+            <div class="progress-section">
+                <div class="progress-text loading">Understanding...</div>
+                <div class="progress-bar-container">
+                    <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <div id="progressPercentage" class="progress-percentage">0%</div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="result-section">
+            <!-- Intent Analysis -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">🧠 Understanding Your Question</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p id="intentSummary" class="lead"></p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <small class="text-muted">Confidence</small>
+                                <h4 id="confidenceText">92%</h4>
+                                <div class="confidence-bar">
+                                    <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <h6>📊 Entity</h6>
+                            <p id="primaryEntity" class="text-muted">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>🔍 Filters</h6>
+                            <ul id="filtersList" class="list-unstyled text-muted">
+                                <li>-</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>📋 Fields</h6>
+                            <p id="fieldsCount" class="text-muted">-</p>
+                        </div>
+                    </div>
+
+                    <div id="assumptionsSection" class="mt-3" style="display: none;">
+                        <h6>💭 Assumptions Made</h6>
+                        <ul id="assumptionsList" class="list-unstyled">
+                        </ul>
+                    </div>
+
+                    <div class="mt-3">
+                        <button id="generateSqlBtn" class="btn btn-analyze">
+                            ✅ Generate SQL
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Results -->
+            <div id="sqlSection" class="card" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📝 Generated SQL Query</h5>
+                    <button id="copySqlBtn" class="btn btn-outline-light btn-sm">📋 Copy</button>
+                </div>
+                <div class="card-body">
+                    <div class="sql-code" id="sqlCode">
+                        -- SQL will appear here
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <h5 id="tablesCount">1</h5>
+                                <small class="text-muted">Tables</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 id="conditionsCount">3</h5>
+                                <small class="text-muted">Conditions</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 id="sqlFieldsCount">4</h5>
+                                <small class="text-muted">Fields</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h5 id="complexityLevel">Simple</h5>
+                                <small class="text-muted">Complexity</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button id="translateBtn" class="btn btn-analyze me-2">
+                            🎯 Translate to Customer Schemas
+                        </button>
+                        <button id="newQueryBtn" class="btn btn-outline-secondary">
+                            🔄 Ask Another Question
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alertContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class SimpleNLQuery {
+            constructor() {
+                this.intentData = null;
+                this.bindEvents();
+                console.log('Simple NL Query interface initialized');
+            }
+
+            bindEvents() {
+                // Debug: Check if all buttons exist
+                const buttons = ['analyzeBtn', 'generateSqlBtn', 'translateBtn', 'clearBtn', 'newQueryBtn', 'copySqlBtn'];
+                buttons.forEach(id => {
+                    const element = document.getElementById(id);
+                    console.log(`Button ${id}:`, element ? 'EXISTS' : 'NOT FOUND');
+                });
+
+                // Add debug click handlers with alerts
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                if (analyzeBtn) {
+                    analyzeBtn.addEventListener('click', (e) => {
+                        console.log('Analyze button clicked!');
+                        this.analyzeQuestion();
+                    });
+                }
+                
+                const generateBtn = document.getElementById('generateSqlBtn');
+                if (generateBtn) {
+                    generateBtn.addEventListener('click', (e) => {
+                        console.log('Generate SQL button clicked!');
+                        this.generateSQL();
+                    });
+                }
+                
+                const translateBtn = document.getElementById('translateBtn');
+                if (translateBtn) {
+                    translateBtn.addEventListener('click', (e) => {
+                        console.log('Translate button clicked!');
+                        this.translateQuery();
+                    });
+                }
+                
+                const clearBtn = document.getElementById('clearBtn');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', (e) => {
+                        console.log('Clear button clicked!');
+                        this.clearAll();
+                    });
+                }
+                
+                const newQueryBtn = document.getElementById('newQueryBtn');
+                if (newQueryBtn) {
+                    newQueryBtn.addEventListener('click', (e) => {
+                        console.log('New query button clicked!');
+                        this.clearAll();
+                    });
+                }
+                
+                const copySqlBtn = document.getElementById('copySqlBtn');
+                if (copySqlBtn) {
+                    copySqlBtn.addEventListener('click', (e) => {
+                        console.log('Copy SQL button clicked!');
+                        this.copySQL();
+                    });
+                }
+
+                // Example tags
+                document.querySelectorAll('.example-tag').forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        console.log('Example tag clicked:', tag.dataset.query);
+                        document.getElementById('questionInput').value = tag.dataset.query;
+                    });
+                });
+
+                console.log('Event listeners attached with debug alerts and element checks');
+            }
+
+            showAlert(message, type = 'info') {
+                const alertHtml = `
+                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                document.getElementById('alertContainer').innerHTML = alertHtml;
+                setTimeout(() => {
+                    const alert = document.querySelector('.alert');
+                    if (alert) alert.remove();
+                }, 5000);
+            }
+
+            showLoading() {
+                console.log('Showing loading...');
+                document.getElementById('loadingSection').style.display = 'block';
+                // Don't hide results section during SQL generation, just show loading
+            }
+
+            hideLoading() {
+                console.log('Hiding loading...');
+                document.getElementById('loadingSection').style.display = 'none';
+            }
+
+            async analyzeQuestion() {
+                console.log('Analyze button clicked');
+                const question = document.getElementById('questionInput').value.trim();
+                
+                if (!question) {
+                    this.showAlert('Please enter a question first.', 'warning');
+                    return;
+                }
+
+                // Hide previous results and show loading
+                document.getElementById('resultsSection').style.display = 'none';
+                document.getElementById('sqlSection').style.display = 'none';
+                this.showLoading();
+
+                try {
+                    const response = await fetch('/api/nl-to-sql/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: question })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Analysis response:', data);
+                    
+                    this.intentData = data.intent_analysis;
+                    this.displayResults(data.intent_analysis);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Failed to analyze question. Please try again.', 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            displayResults(analysis) {
+                console.log('Displaying results:', analysis);
+                
+                // Show results section
+                document.getElementById('resultsSection').style.display = 'block';
+                
+                // Update intent summary
+                const summary = this.buildSummary(analysis);
+                document.getElementById('intentSummary').textContent = summary;
+                
+                // Update confidence
+                const confidence = Math.round(analysis.confidence * 100);
+                document.getElementById('confidenceText').textContent = confidence + '%';
+                document.getElementById('confidenceBar').style.width = confidence + '%';
+                
+                // Set confidence color
+                const bar = document.getElementById('confidenceBar');
+                bar.className = 'confidence-fill ' + (
+                    confidence >= 80 ? 'confidence-high' :
+                    confidence >= 60 ? 'confidence-medium' : 'confidence-low'
+                );
+                
+                // Update details
+                document.getElementById('primaryEntity').textContent = analysis.primary_entity;
+                document.getElementById('fieldsCount').textContent = analysis.requested_fields.length + ' fields';
+                
+                // Update filters
+                const filtersList = document.getElementById('filtersList');
+                filtersList.innerHTML = '';
+                if (analysis.filter_conditions.length > 0) {
+                    analysis.filter_conditions.forEach(filter => {
+                        const li = document.createElement('li');
+                        li.textContent = `${filter.field} ${filter.operator} ${filter.value}`;
+                        filtersList.appendChild(li);
+                    });
+                } else {
+                    filtersList.innerHTML = '<li>No filters</li>';
+                }
+                
+                // Update assumptions
+                if (analysis.assumptions && analysis.assumptions.length > 0) {
+                    document.getElementById('assumptionsSection').style.display = 'block';
+                    const assumptionsList = document.getElementById('assumptionsList');
+                    assumptionsList.innerHTML = '';
+                    analysis.assumptions.forEach(assumption => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<small class="text-muted">• ${assumption}</small>`;
+                        assumptionsList.appendChild(li);
+                    });
+                }
+
+                // Scroll to results
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+            }
+
+            buildSummary(analysis) {
+                const intent = analysis.query_intent.replace('_', ' ');
+                let summary = `I understand you want to ${intent} from ${analysis.primary_entity}`;
+                
+                if (analysis.filter_conditions.length > 0) {
+                    const conditions = analysis.filter_conditions.map(c => 
+                        `${c.field} ${c.operator === '=' ? 'is' : c.operator} ${c.value}`
+                    ).join(' and ');
+                    summary += ` where ${conditions}`;
+                }
+                
+                return summary + '.';
+            }
+
+            async generateSQL() {
+                console.log('Generate SQL clicked');
+                if (!this.intentData) {
+                    this.showAlert('Please analyze a question first.', 'warning');
+                    return;
+                }
+
+                console.log('Intent data:', this.intentData);
+                this.showLoading();
+
+                try {
+                    const response = await fetch('/api/nl-to-sql/generate-sql', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ intent_analysis: this.intentData })
+                    });
+
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('SQL response:', data);
+                    
+                    if (data.success && data.sql_generation) {
+                        this.displaySQL(data.sql_generation);
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error generating SQL:', error);
+                    this.showAlert('Failed to generate SQL: ' + error.message, 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            displaySQL(sqlData) {
+                console.log('Displaying SQL:', sqlData);
+                
+                try {
+                    document.getElementById('sqlSection').style.display = 'block';
+                    document.getElementById('sqlCode').textContent = sqlData.sql_query || 'No SQL generated';
+                    
+                    // Update stats safely
+                    document.getElementById('tablesCount').textContent = (sqlData.tables_used || []).length;
+                    document.getElementById('sqlFieldsCount').textContent = (sqlData.fields_used || []).length;
+                    
+                    const whereMatches = sqlData.sql_query ? (sqlData.sql_query.match(/WHERE|AND|OR/gi) || []).length : 0;
+                    document.getElementById('conditionsCount').textContent = whereMatches;
+                    
+                    const tablesCount = (sqlData.tables_used || []).length;
+                    const complexity = tablesCount > 2 ? 'Complex' : 
+                                     tablesCount > 1 ? 'Medium' : 'Simple';
+                    document.getElementById('complexityLevel').textContent = complexity;
+                    
+                    // Scroll to SQL section
+                    setTimeout(() => {
+                        document.getElementById('sqlSection').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('Error displaying SQL:', error);
+                    this.showAlert('Error displaying SQL results', 'danger');
+                }
+            }
+
+            async translateQuery() {
+                const sqlQuery = document.getElementById('sqlCode').textContent;
+                if (!sqlQuery || sqlQuery === '-- SQL will appear here') {
+                    this.showAlert('Please generate SQL first.', 'warning');
+                    return;
+                }
+
+                this.showAlert('Redirecting to customer translation...', 'info');
+                
+                // Store the SQL in sessionStorage and redirect
+                sessionStorage.setItem('canonicalSQL', sqlQuery);
+                window.location.href = '/query-translation-advanced-v2';
+            }
+
+            async copySQL() {
+                const sqlCode = document.getElementById('sqlCode').textContent;
+                try {
+                    await navigator.clipboard.writeText(sqlCode);
+                    this.showAlert('SQL copied to clipboard!', 'success');
+                } catch (error) {
+                    this.showAlert('Failed to copy SQL.', 'danger');
+                }
+            }
+
+            clearAll() {
+                document.getElementById('questionInput').value = '';
+                document.getElementById('resultsSection').style.display = 'none';
+                document.getElementById('sqlSection').style.display = 'none';
+                document.getElementById('assumptionsSection').style.display = 'none';
+                this.intentData = null;
+                
+                document.getElementById('questionInput').focus();
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new SimpleNLQuery();
+        });
+    </script>
+</body>
+</html>

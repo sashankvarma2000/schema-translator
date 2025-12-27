@@ -1,0 +1,352 @@
+tenant: tenant_C
+description: "UK OCDS Real Data - Contracts Finder with proper OCDS multi-table structure"
+
+tables:
+  releases:
+    description: "OCDS releases - one row per release with basic metadata"
+    columns:
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "OCDS release identifier (primary key)"
+      
+      ocid:
+        type: "varchar(100)"
+        nullable: true
+        description: "Open Contracting ID"
+      
+      date:
+        type: "timestamp"
+        nullable: true
+        description: "Release publication date"
+      
+      tag:
+        type: "varchar(200)"
+        nullable: true
+        description: "OCDS release tags (comma-separated)"
+      
+      initiation_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "OCDS initiation type"
+      
+      language:
+        type: "varchar(10)"
+        nullable: true
+        description: "Release language"
+      
+      buyer_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Primary buyer organization name"
+      
+      tender_title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Tender title from release"
+
+  parties:
+    description: "OCDS parties - flattened from releases[].parties[]"
+    columns:
+      party_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal party identifier (primary key)"
+      
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "Foreign key to releases table"
+      
+      party_ocid:
+        type: "varchar(100)"
+        nullable: true
+        description: "OCDS party identifier"
+      
+      name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Organization name"
+      
+      roles:
+        type: "varchar(200)"
+        nullable: true
+        description: "Party roles (buyer, supplier, etc.)"
+      
+      identifier_scheme:
+        type: "varchar(100)"
+        nullable: true
+        description: "Identifier scheme (GB-COH, etc.)"
+      
+      identifier_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Organization identifier"
+      
+      address_country:
+        type: "varchar(100)"
+        nullable: true
+        description: "Country name"
+      
+      contact_email:
+        type: "varchar(200)"
+        nullable: true
+        description: "Contact email address"
+
+  awards:
+    description: "OCDS awards - from releases[].awards[]"
+    columns:
+      award_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal award identifier (primary key)"
+      
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "Foreign key to releases table"
+      
+      award_ocid:
+        type: "varchar(100)"
+        nullable: true
+        description: "OCDS award identifier"
+      
+      title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Award title"
+      
+      status:
+        type: "varchar(50)"
+        nullable: true
+        description: "OCDS award status"
+      
+      date:
+        type: "date"
+        nullable: true
+        description: "Award date"
+      
+      value_amount:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Award value amount"
+      
+      value_currency:
+        type: "varchar(3)"
+        nullable: true
+        description: "Award currency (GBP)"
+      
+      suppliers:
+        type: "text"
+        nullable: true
+        description: "Supplier names (semicolon-separated)"
+      
+      contract_period_start:
+        type: "date"
+        nullable: true
+        description: "Contract period start date"
+      
+      contract_period_end:
+        type: "date"
+        nullable: true
+        description: "Contract period end date"
+
+  contracts:
+    description: "OCDS contracts - from releases[].contracts[]"
+    columns:
+      contract_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal contract identifier (primary key)"
+      
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "Foreign key to releases table"
+      
+      contract_ocid:
+        type: "varchar(100)"
+        nullable: true
+        description: "OCDS contract identifier"
+      
+      award_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Related award ID"
+      
+      title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Contract title"
+      
+      status:
+        type: "varchar(50)"
+        nullable: true
+        description: "OCDS contract status"
+      
+      date_signed:
+        type: "date"
+        nullable: true
+        description: "Contract signature date"
+      
+      value_amount:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Contract value amount"
+      
+      value_currency:
+        type: "varchar(3)"
+        nullable: true
+        description: "Contract currency"
+      
+      period_start:
+        type: "date"
+        nullable: true
+        description: "Contract period start"
+      
+      period_end:
+        type: "date"
+        nullable: true
+        description: "Contract period end"
+
+  documents:
+    description: "OCDS documents - from awards/contracts/tender documents"
+    columns:
+      document_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal document identifier (primary key)"
+      
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "Foreign key to releases table"
+      
+      document_type:
+        type: "varchar(100)"
+        nullable: true
+        description: "OCDS document type"
+      
+      title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Document title"
+      
+      url:
+        type: "varchar(1000)"
+        nullable: true
+        description: "Document URL"
+      
+      format:
+        type: "varchar(50)"
+        nullable: true
+        description: "Document format (PDF, etc.)"
+      
+      language:
+        type: "varchar(10)"
+        nullable: true
+        description: "Document language"
+      
+      source:
+        type: "varchar(50)"
+        nullable: true
+        description: "Source (tender, award, contract)"
+      
+      related_award_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Related award ID if applicable"
+      
+      related_contract_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Related contract ID if applicable"
+
+  items:
+    description: "OCDS items - contract-level procurement items"
+    columns:
+      item_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal item identifier (primary key)"
+      
+      release_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "Foreign key to releases table"
+      
+      source:
+        type: "varchar(50)"
+        nullable: true
+        description: "Source (tender, award, contract)"
+      
+      item_ocid:
+        type: "varchar(100)"
+        nullable: true
+        description: "OCDS item identifier"
+      
+      description:
+        type: "text"
+        nullable: true
+        description: "Item description"
+      
+      classification_scheme:
+        type: "varchar(50)"
+        nullable: true
+        description: "Classification scheme (CPV, etc.)"
+      
+      classification_id:
+        type: "varchar(50)"
+        nullable: true
+        description: "Classification code"
+      
+      classification_description:
+        type: "varchar(500)"
+        nullable: true
+        description: "Classification description"
+      
+      quantity:
+        type: "decimal(12,2)"
+        nullable: true
+        description: "Item quantity"
+      
+      unit_name:
+        type: "varchar(100)"
+        nullable: true
+        description: "Unit of measurement"
+      
+      unit_value_amount:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Unit value amount"
+
+relationships:
+  - from_table: "parties"
+    from_column: "release_id"
+    to_table: "releases"
+    to_column: "release_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "awards"
+    from_column: "release_id"
+    to_table: "releases"
+    to_column: "release_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "contracts"
+    from_column: "release_id"
+    to_table: "releases"
+    to_column: "release_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "documents"
+    from_column: "release_id"
+    to_table: "releases"
+    to_column: "release_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "items"
+    from_column: "release_id"
+    to_table: "releases"
+    to_column: "release_id"
+    relationship_type: "many_to_one"

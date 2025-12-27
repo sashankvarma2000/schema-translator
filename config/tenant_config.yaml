@@ -1,0 +1,92 @@
+# Tenant Configuration
+# This file defines tenant-specific settings and field mappings
+
+tenants:
+  tenant_A:
+    display_name: "Tenant A (USAspending)"
+    description: "Federal Awards Database"
+    schema_path: "customer_schemas/tenant_A/schema.yaml"
+    field_mappings:
+      contract_id: "generated_unique_award_id"
+      status: 
+        type: "derived"
+        logic: "CASE WHEN period_end >= CURRENT_DATE AND period_start <= CURRENT_DATE THEN 'active' ELSE 'inactive' END"
+        source_fields: ["period_start", "period_end"]
+      party_name: "legal_name"
+    primary_table: "awards"
+    complexity: "medium"
+    
+  tenant_B:
+    display_name: "Tenant B (World Bank)"
+    description: "World Bank Projects"
+    schema_path: "customer_schemas/tenant_B/schema.yaml"
+    field_mappings:
+      contract_id: "contract_id"
+      title: "contract_title"
+      status: "contract_status"
+      date_signed: "signing_date"
+      period_start: "signing_date"
+      period_end: "completion_date"
+      value_amount: "contract_value_usd"
+      value_currency: "'USD'"
+      buyer_party_id: "project_id"
+      supplier_party_ids: "supplier_id"
+    primary_table: "contracts"
+    complexity: "complex"
+    
+  tenant_C:
+    display_name: "Tenant C (OCDS)"
+    description: "OCDS Compliant System"
+    schema_path: "customer_schemas/tenant_C/schema.yaml"
+    field_mappings:
+      contract_id: "ocid"
+      status: "contract_status"
+      party_name: "party_name"
+    primary_table: "releases"
+    complexity: "complex"
+    
+  tenant_D:
+    display_name: "Tenant D (Enterprise)"
+    description: "Enterprise Contracts"
+    schema_path: "customer_schemas/tenant_D/schema.yaml"
+    field_mappings:
+      contract_id: "contract_id"
+      status: "contract_status"
+      value: "contract_value"
+    primary_table: "contracts"
+    complexity: "medium"
+    
+  tenant_E:
+    display_name: "Tenant E (Government)"
+    description: "Government Contracts"
+    schema_path: "customer_schemas/tenant_E/schema.yaml"
+    field_mappings:
+      contract_id: "contract_number"
+      status: "action_type"
+      value: "obligated_amount"
+    primary_table: "contracts_header"
+    complexity: "simple"
+
+# Demo customers for testing
+demo_customers:
+  customer_a:
+    display_name: "Demo A (Single Table)"
+    description: "Simple single-table scenario"
+    complexity: "simple"
+    
+  customer_b:
+    display_name: "Demo B (Multi-Table)"
+    description: "Complex multi-table with temporal logic"
+    complexity: "complex"
+    
+  customer_c:
+    display_name: "Demo C (Master-Detail)"
+    description: "Different split pattern with master-detail relationships"
+    complexity: "medium"
+
+# Default settings
+defaults:
+  confidence_threshold: 0.7
+  max_join_tables: 5
+  timeout_seconds: 30
+  retry_attempts: 3

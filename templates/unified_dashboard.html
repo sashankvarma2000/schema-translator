@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Translator - Unified Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Unified Styles -->
+    <link rel="stylesheet" href="/static/css/unified-style.css">
+</head>
+<body>
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-logo">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div>
+                    <h1>Schema Translator</h1>
+                    <p class="text-muted" style="margin: 0; font-size: 0.875rem;">LLM-Powered Multi-Tenant Query Translation</p>
+                </div>
+            </div>
+            
+            <div class="nav-tabs-custom">
+                <button class="nav-tab active" onclick="switchTab('overview')">
+                    <i class="fas fa-home"></i>
+                    <span>Overview</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('query-translation')">
+                    <i class="fas fa-code"></i>
+                    <span>Query Translation</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('nl-query')">
+                    <i class="fas fa-comments"></i>
+                    <span>Natural Language</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('tenants')">
+                    <i class="fas fa-building"></i>
+                    <span>Tenants</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('system')">
+                    <i class="fas fa-cog"></i>
+                    <span>System</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="container-fluid" style="max-width: 1600px; margin: 0 auto;">
+        
+        <!-- TAB 1: OVERVIEW -->
+        <div id="overview-tab" class="tab-content active">
+            <!-- System Status Banner -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-signal"></i> System Status</h5>
+                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> Operational</span>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-4">
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="status-indicator status-online"></span>
+                                <div>
+                                    <div class="fw-bold">API Server</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">Online</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="status-indicator status-online"></span>
+                                <div>
+                                    <div class="fw-bold">LLM Service</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">Connected</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="status-indicator status-online"></span>
+                                <div>
+                                    <div class="fw-bold">Cache System</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">Active</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-code-branch text-primary"></i>
+                                <div>
+                                    <div class="fw-bold">Version</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">v2.0.0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-4 mb-4">
+                <div class="metric-card">
+                    <i class="fas fa-database text-primary fa-2x mb-2"></i>
+                    <div class="metric-value" id="tenant-count">5</div>
+                    <div class="metric-label">Active Tenants</div>
+                </div>
+                <div class="metric-card">
+                    <i class="fas fa-table text-success fa-2x mb-2"></i>
+                    <div class="metric-value">21</div>
+                    <div class="metric-label">Total Tables</div>
+                </div>
+                <div class="metric-card">
+                    <i class="fas fa-columns text-info fa-2x mb-2"></i>
+                    <div class="metric-value">180+</div>
+                    <div class="metric-label">Total Columns</div>
+                </div>
+                <div class="metric-card">
+                    <i class="fas fa-bolt text-warning fa-2x mb-2"></i>
+                    <div class="metric-value" id="avg-translation-time">0.01s</div>
+                    <div class="metric-label">Avg Translation Time</div>
+                </div>
+            </div>
+
+            <!-- Recent Activity & Quick Actions -->
+            <div class="grid grid-cols-2">
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column gap-3">
+                            <button class="btn btn-primary btn-lg" onclick="switchTab('query-translation')">
+                                <i class="fas fa-code"></i>
+                                Translate SQL Query
+                            </button>
+                            <button class="btn btn-success btn-lg" onclick="switchTab('nl-query')">
+                                <i class="fas fa-comments"></i>
+                                Ask Natural Language Question
+                            </button>
+                            <button class="btn btn-secondary btn-lg" onclick="switchTab('tenants')">
+                                <i class="fas fa-building"></i>
+                                View Tenant Schemas
+                            </button>
+                            <a href="/architecture" class="btn btn-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                                <i class="fas fa-project-diagram"></i>
+                                View System Architecture
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Features -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-star"></i> Key Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="badge badge-success" style="margin-top: 0.25rem;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Schema Validation</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                        Validates translated queries against actual tenant schemas
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="badge badge-success" style="margin-top: 0.25rem;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Auto-Regeneration</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                        Automatically fixes invalid queries with LLM
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="badge badge-success" style="margin-top: 0.25rem;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Intelligent Caching</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                        Sub-millisecond translations after first mapping
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="badge badge-success" style="margin-top: 0.25rem;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Natural Language Support</div>
+                                    <div class="text-muted" style="font-size: 0.875rem;">
+                                        Ask questions in plain English, get SQL
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: QUERY TRANSLATION -->
+        <div id="query-translation-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-code"></i> SQL Query Translation</h5>
+                    <span class="badge badge-info">Powered by Schema Validation</span>
+                </div>
+                <div class="card-body">
+                    <!-- Tenant Selection -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-building"></i> Select Tenant
+                        </label>
+                        <select id="tenant-select" class="form-control">
+                            <option value="">Choose a tenant...</option>
+                            <option value="tenant_A">Tenant A - USAspending (Federal Awards)</option>
+                            <option value="tenant_B">Tenant B - World Bank (Projects)</option>
+                            <option value="tenant_C">Tenant C - OCDS (Procurement)</option>
+                            <option value="tenant_D">Tenant D - Enterprise Contracts</option>
+                            <option value="tenant_E">Tenant E - Government Contracts</option>
+                        </select>
+                        <div class="form-help">Select the tenant whose schema you want to translate to</div>
+                    </div>
+
+                    <!-- Canonical Query Input -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-file-code"></i> Canonical SQL Query
+                        </label>
+                        <textarea id="canonical-query" class="form-control" rows="8" placeholder="SELECT 
+    contract_id,
+    status,
+    value_amount
+FROM contracts
+WHERE status = 'active'
+ORDER BY value_amount DESC
+LIMIT 10"></textarea>
+                        <div class="form-help">Enter your standardized SQL query using the canonical schema</div>
+                    </div>
+
+                    <!-- Translate Button -->
+                    <div class="d-flex gap-2">
+                        <button id="translate-btn" class="btn btn-primary btn-lg">
+                            <i class="fas fa-exchange-alt"></i>
+                            Translate Query
+                        </button>
+                        <button id="translate-and-execute-btn" class="btn btn-success btn-lg" onclick="translateAndExecute()">
+                            <i class="fas fa-bolt"></i>
+                            Translate & Execute
+                        </button>
+                        <button id="execute-btn" class="btn btn-info btn-lg" onclick="executeQuery()" title="Execute the translated query">
+                            <i class="fas fa-play"></i>
+                            Execute Query
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadExample()">
+                            <i class="fas fa-lightbulb"></i>
+                            Load Example
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearQuery()">
+                            <i class="fas fa-eraser"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="translation-results" class="card" style="display: none;">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> Translation Results</h5>
+                    <div class="d-flex gap-2">
+                        <span id="confidence-badge" class="badge badge-success"></span>
+                        <span id="validation-badge" class="badge badge-success"></span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Translated Query -->
+                    <div class="mb-4">
+                        <div class="code-block">
+                            <div class="code-block-header">
+                                <span class="code-block-title">Translated Query</span>
+                                <button class="copy-button" onclick="copyToClipboard('translated-query-code')">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <pre><code id="translated-query-code">-- Translated query will appear here</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="grid grid-cols-3">
+                        <div>
+                            <div class="text-muted mb-1">Translation Path</div>
+                            <div class="fw-bold" id="translation-path">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted mb-1">Cache Status</div>
+                            <div class="fw-bold" id="cache-status">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted mb-1">Translation Time</div>
+                            <div class="fw-bold" id="translation-time">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Warnings/Errors -->
+                    <div id="warnings-section" style="display: none;" class="mt-3">
+                        <div class="alert alert-warning">
+                            <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div>
+                                <div class="fw-bold mb-1">Warnings</div>
+                                <ul id="warnings-list" class="mb-0"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="errors-section" style="display: none;" class="mt-3">
+                        <div class="alert alert-danger">
+                            <div class="alert-icon"><i class="fas fa-times-circle"></i></div>
+                            <div>
+                                <div class="fw-bold mb-1">Validation Errors</div>
+                                <ul id="errors-list" class="mb-0"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Results Container -->
+            <div id="query-results" class="mt-4"></div>
+        </div>
+
+        <!-- TAB 3: NATURAL LANGUAGE QUERY -->
+        <div id="nl-query-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-comments"></i> Natural Language to SQL</h5>
+                    <span class="badge badge-success">Ask in Plain English</span>
+                </div>
+                <div class="card-body">
+                    <!-- Tenant Selection -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-building"></i> Select Tenant
+                        </label>
+                        <select id="nl-tenant-select" class="form-control">
+                            <option value="">Choose a tenant...</option>
+                            <option value="tenant_A">Tenant A - USAspending (Federal Awards)</option>
+                            <option value="tenant_B">Tenant B - World Bank (Projects)</option>
+                            <option value="tenant_C">Tenant C - OCDS (Procurement)</option>
+                            <option value="tenant_D">Tenant D - Enterprise Contracts</option>
+                            <option value="tenant_E">Tenant E - Government Contracts</option>
+                        </select>
+                    </div>
+
+                    <!-- Natural Language Input -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-comment-dots"></i> Ask Your Question
+                        </label>
+                        <textarea id="nl-query" class="form-control" rows="4" placeholder="Show me all active contracts worth more than $100,000, ordered by value"></textarea>
+                        <div class="form-help">Ask your question in plain English</div>
+                    </div>
+
+                    <!-- Example Questions -->
+                    <div class="alert alert-info">
+                        <div class="alert-icon"><i class="fas fa-lightbulb"></i></div>
+                        <div>
+                            <div class="fw-bold mb-2">Example Questions:</div>
+                            <ul class="mb-0" style="font-size: 0.875rem;">
+                                <li>"Show me active contracts over $100K expiring in Q1 2025"</li>
+                                <li>"What are the top 10 suppliers by total contract value?"</li>
+                                <li>"List all contracts signed in the last 30 days"</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button id="nl-translate-btn" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic"></i>
+                            Generate SQL
+                        </button>
+                        <button id="nl-execute-btn" class="btn btn-success btn-lg" onclick="translateNLQueryAndExecute()">
+                            <i class="fas fa-bolt"></i>
+                            Generate & Execute
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NL Results -->
+            <div id="nl-results" class="card" style="display: none;">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> Generated SQL</h5>
+                </div>
+                <div class="card-body">
+                    <div class="code-block">
+                        <div class="code-block-header">
+                            <span class="code-block-title">SQL Query</span>
+                            <button class="copy-button" onclick="copyToClipboard('nl-query-code')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <pre><code id="nl-query-code">-- Generated SQL will appear here</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: TENANTS -->
+        <div id="tenants-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-building"></i> Tenant Schemas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-2" id="tenants-grid">
+                        <!-- Tenant cards will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: SYSTEM -->
+        <div id="system-tab" class="tab-content">
+            <!-- Cache Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-database"></i> Cache Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-4">
+                        <div class="metric-card">
+                            <i class="fas fa-memory text-primary fa-2x mb-2"></i>
+                            <div class="metric-value" id="cached-tenants">4</div>
+                            <div class="metric-label">Cached Tenants</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-check text-success fa-2x mb-2"></i>
+                            <div class="metric-value" id="cache-hits">157</div>
+                            <div class="metric-label">Cache Hits</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-times text-danger fa-2x mb-2"></i>
+                            <div class="metric-value" id="cache-misses">4</div>
+                            <div class="metric-label">Cache Misses</div>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-percentage text-info fa-2x mb-2"></i>
+                            <div class="metric-value" id="cache-hit-rate">97.5%</div>
+                            <div class="metric-label">Hit Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Per-Tenant Cache Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-layer-group"></i> Tenant Cache Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tenant</th>
+                                    <th>Status</th>
+                                    <th>Field Mappings</th>
+                                    <th>Complex Mappings</th>
+                                    <th>Usage Count</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tenant-cache-table">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-2">
+                        <div>
+                            <div class="fw-bold mb-2">LLM Configuration</div>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Provider:</span>
+                                    <span class="fw-bold">OpenAI</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Model:</span>
+                                    <span class="fw-bold">GPT-5-mini</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Temperature:</span>
+                                    <span class="fw-bold">0.1</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="fw-bold mb-2">System Settings</div>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Auto-Regeneration:</span>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Schema Validation:</span>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Caching:</span>
+                                    <span class="badge badge-success">Enabled</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Links -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-book"></i> Documentation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-2">
+                        <a href="/architecture" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                            <i class="fas fa-project-diagram"></i> 🌟 System Architecture & Design Decisions
+                        </a>
+                        <a href="/docs/complete-system-flow" class="btn btn-secondary">
+                            <i class="fas fa-file-alt"></i> Complete System Flow
+                        </a>
+                        <a href="/docs/api-reference" class="btn btn-secondary">
+                            <i class="fas fa-code"></i> API Reference
+                        </a>
+                        <a href="/docs/testing-guide" class="btn btn-secondary">
+                            <i class="fas fa-flask"></i> Testing Guide
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/unified-dashboard.js"></script>
+</body>
+</html>

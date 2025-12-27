@@ -1,0 +1,113 @@
+version: "1.0.0"
+description: "Canonical Contract Schema - Flattened for Schema Translation"
+
+fields:
+  - name: contract_id
+    type: string
+    required: true
+    description: "Unique contract identifier"
+  
+  - name: total_value
+    type: decimal
+    required: true
+    description: "Total contract value"
+  
+  - name: date_signed
+    type: date
+    required: true
+    description: "Contract signature date"
+  
+  - name: supplier_name
+    type: string
+    required: true
+    description: "Supplier name"
+  
+  - name: buyer_name
+    type: string
+    required: true
+    description: "Buyer name"
+  
+  - name: status
+    type: string
+    required: true
+    description: "Contract status"
+  
+  - name: award_id
+    type: string
+    required: true
+    description: "Award identifier"
+  
+  - name: transaction_id
+    type: string
+    required: true
+    description: "Transaction identifier"
+  
+  - name: party_id
+    type: string
+    required: true
+    description: "Party identifier"
+  
+  - name: value_amount
+    type: decimal
+    required: true
+    description: "Value amount"
+  
+  - name: obligated_amount
+    type: decimal
+    required: true
+    description: "Obligated amount"
+  
+  - name: current_value
+    type: decimal
+    required: true
+    description: "Current value"
+  
+  - name: award_date
+    type: date
+    required: true
+    description: "Award date"
+  
+  - name: period_start
+    type: date
+    required: true
+    description: "Period start date"
+  
+  - name: period_end
+    type: date
+    required: true
+    description: "Period end date"
+  
+  - name: obligation_date
+    type: date
+    required: true
+    description: "Obligation date"
+  
+  - name: last_modified_date
+    type: date
+    required: true
+    description: "Last modified date"
+  
+  - name: awarding_agency
+    type: string
+    required: true
+    description: "Awarding agency"
+  
+  - name: funding_agency
+    type: string
+    required: true
+    description: "Funding agency"
+  
+  - name: description
+    type: string
+    required: true
+    description: "Description"
+  
+  - name: contract_type
+    type: string
+    required: true
+    description: "Contract type"
+  
+  - name: currency
+    type: string
+    required: true
+    description: "Currency code"

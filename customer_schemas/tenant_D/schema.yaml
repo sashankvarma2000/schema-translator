@@ -1,0 +1,119 @@
+tenant: tenant_D
+description: "World Bank Development Finance - Real development contracts with multi-table structure"
+
+tables:
+  contracts:
+    description: "Real World Bank development contracts and project financing"
+    columns:
+      contract_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "World Bank contract identifier (primary key)"
+      
+      project_id:
+        type: "varchar(20)"
+        nullable: true
+        description: "World Bank project identifier (e.g., P075016)"
+      
+      contract_title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Official contract/project title"
+      
+      borrower_country:
+        type: "varchar(200)"
+        nullable: true
+        description: "Borrower country name"
+      
+      region:
+        type: "varchar(100)"
+        nullable: true
+        description: "World Bank regional classification"
+      
+      contract_value_usd_millions:
+        type: "decimal(12,2)"
+        nullable: true
+        description: "Contract value in millions USD"
+      
+      contract_type:
+        type: "varchar(100)"
+        nullable: true
+        description: "World Bank lending instrument type"
+      
+      contract_status:
+        type: "varchar(50)"
+        nullable: true
+        description: "Current contract status"
+      
+      supplier_category:
+        type: "varchar(10)"
+        nullable: true
+        description: "Foreign key to categories table"
+      
+      approval_date:
+        type: "varchar(20)"
+        nullable: true
+        description: "Board approval date"
+      
+      procurement_method:
+        type: "varchar(100)"
+        nullable: true
+        description: "Procurement method used"
+
+  suppliers:
+    description: "Implementing agencies and contractors (derived from country data)"
+    columns:
+      supplier_id:
+        type: "varchar(10)"
+        nullable: false
+        description: "Supplier identifier (primary key)"
+      
+      supplier_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Implementing agency/contractor name"
+      
+      supplier_country:
+        type: "varchar(200)"
+        nullable: true
+        description: "Supplier country"
+      
+      supplier_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of supplier organization"
+      
+      registration_status:
+        type: "varchar(20)"
+        nullable: true
+        description: "Registration status with World Bank"
+
+  categories:
+    description: "World Bank sector classifications and categories"
+    columns:
+      category_code:
+        type: "varchar(10)"
+        nullable: false
+        description: "World Bank sector code (primary key)"
+      
+      category_name:
+        type: "varchar(200)"
+        nullable: true
+        description: "Full sector name"
+      
+      sector_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of sector"
+      
+      is_active:
+        type: "boolean"
+        nullable: true
+        description: "Whether category is currently active"
+
+relationships:
+  - from_table: "contracts"
+    from_column: "supplier_category"
+    to_table: "categories"
+    to_column: "category_code"
+    relationship_type: "many_to_one"

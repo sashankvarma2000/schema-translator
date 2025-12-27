@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}HITL Review - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-user-check"></i> Human-in-the-Loop (HITL) Review</h1>
+        <p class="lead">Review and approve medium-confidence mappings that need human validation</p>
+    </div>
+</div>
+
+<!-- HITL Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ hitl_items|length }}</h5>
+                <p class="card-text">Pending Review</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ hitl_items|selectattr('confidence', 'lt', 0.5)|list|length }}</h5>
+                <p class="card-text">High Priority (Low Confidence)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ hitl_items|selectattr('confidence', 'ge', 0.5)|selectattr('confidence', 'lt', 0.7)|list|length }}</h5>
+                <p class="card-text">Medium Priority</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ hitl_items|selectattr('confidence', 'ge', 0.7)|list|length }}</h5>
+                <p class="card-text">Lower Priority</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HITL Review Items -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> Pending Reviews</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshHITL()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="approveAll()">
+                        <i class="fas fa-check-double"></i> Approve All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if hitl_items %}
+                    <!-- Sort items by priority and confidence -->
+                    {% set sorted_items = hitl_items|sort(attribute='confidence') %}
+                    {% for item in sorted_items %}
+                    <div class="hitl-item mb-4 border rounded p-3" data-tenant="{{ item.tenant }}" data-table="{{ item.table }}" data-column="{{ item.column }}">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-building"></i> {{ item.tenant|upper }}
+                                        <span class="badge bg-secondary ms-2">{{ item.table }}</span>
+                                        <span class="badge bg-info">{{ item.column }}</span>
+                                    </h6>
+                                    <div>
+                                        {% if item.confidence < 0.5 %}
+                                            <span class="badge bg-danger">High Priority</span>
+                                        {% elif item.confidence < 0.7 %}
+                                            <span class="badge bg-warning">Medium Priority</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Lower Priority</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <strong>Suggested Mapping:</strong> 
+                                        <code class="text-primary">{{ item.suggested_canonical }}</code>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Confidence:</strong> 
+                                        {% if item.confidence < 0.5 %}
+                                            <span class="text-danger fw-bold">{{ "%.1f"|format(item.confidence * 100) }}%</span>
+                                        {% elif item.confidence < 0.7 %}
+                                            <span class="text-warning fw-bold">{{ "%.1f"|format(item.confidence * 100) }}%</span>
+                                        {% else %}
+                                            <span class="text-info fw-bold">{{ "%.1f"|format(item.confidence * 100) }}%</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Semantic Type:</strong> 
+                                    <span class="badge bg-light text-dark">{{ item.semantic_type }}</span>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Reasoning:</strong> 
+                                    <small class="text-muted">{{ item.reasoning }}</small>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Sample Values:</strong> 
+                                    <code class="small">{{ item.sample_values|join(', ') }}</code>
+                                </div>
+                                
+                                {% if item.transformations %}
+                                <div class="mb-0">
+                                    <strong>Required Transformations:</strong>
+                                    <ul class="small mb-0">
+                                        {% for transform in item.transformations %}
+                                        <li>{{ transform }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex flex-column gap-2">
+                                    <button class="btn btn-success btn-sm" onclick="approveMapping('{{ item.tenant }}', '{{ item.table }}', '{{ item.column }}')">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectMapping('{{ item.tenant }}', '{{ item.table }}', '{{ item.column }}')">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                    <button class="btn btn-warning btn-sm" onclick="modifyMapping('{{ item.tenant }}', '{{ item.table }}', '{{ item.column }}')">
+                                        <i class="fas fa-edit"></i> Modify
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="viewDetails('{{ item.tenant }}', '{{ item.table }}', '{{ item.column }}')">
+                                        <i class="fas fa-eye"></i> Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h5>No Pending Reviews</h5>
+                        <p>All mappings have been reviewed or no medium-confidence mappings are available.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HITL Workflow Guide -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> HITL Workflow Guide</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-check text-success"></i> Approve</h6>
+                        <p class="small">Use when the suggested mapping is correct and you're confident in the AI's recommendation.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-times text-danger"></i> Reject</h6>
+                        <p class="small">Use when the mapping is clearly incorrect or doesn't make sense for your use case.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-edit text-warning"></i> Modify</h6>
+                        <p class="small">Use when the mapping is close but needs adjustment (e.g., different canonical field).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function approveMapping(tenant, table, column) {
+    if (confirm(`Approve mapping for ${tenant}.${table}.${column}?`)) {
+        axios.post('/api/approve_mapping', {
+            tenant: tenant,
+            table: table,
+            column: column
+        })
+        .then(response => {
+            showNotification('Mapping approved successfully', 'success');
+            removeHITLItem(tenant, table, column);
+        })
+        .catch(error => {
+            showNotification('Error approving mapping: ' + error.message, 'danger');
+        });
+    }
+}
+
+function rejectMapping(tenant, table, column) {
+    if (confirm(`Reject mapping for ${tenant}.${table}.${column}?`)) {
+        axios.post('/api/reject_mapping', {
+            tenant: tenant,
+            table: table,
+            column: column
+        })
+        .then(response => {
+            showNotification('Mapping rejected', 'warning');
+            removeHITLItem(tenant, table, column);
+        })
+        .catch(error => {
+            showNotification('Error rejecting mapping: ' + error.message, 'danger');
+        });
+    }
+}
+
+function modifyMapping(tenant, table, column) {
+    const newCanonical = prompt(`Enter new canonical field for ${tenant}.${table}.${column}:`, '');
+    if (newCanonical) {
+        // In a real implementation, this would update the mapping
+        showNotification(`Mapping modified to: ${newCanonical}`, 'info');
+        removeHITLItem(tenant, table, column);
+    }
+}
+
+function viewDetails(tenant, table, column) {
+    // In a real implementation, this would show detailed information
+    alert(`Detailed information for ${tenant}.${table}.${column}\n\nThis would show:\n- Source schema details\n- Target canonical schema\n- Data samples\n- Confidence breakdown`);
+}
+
+function removeHITLItem(tenant, table, column) {
+    const item = document.querySelector(`[data-tenant="${tenant}"][data-table="${table}"][data-column="${column}"]`);
+    if (item) {
+        item.remove();
+    }
+}
+
+function refreshHITL() {
+    location.reload();
+}
+
+function approveAll() {
+    if (confirm('Approve all pending mappings? This action cannot be undone.')) {
+        const items = document.querySelectorAll('.hitl-item');
+        items.forEach(item => {
+            const tenant = item.dataset.tenant;
+            const table = item.dataset.table;
+            const column = item.dataset.column;
+            approveMapping(tenant, table, column);
+        });
+    }
+}
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

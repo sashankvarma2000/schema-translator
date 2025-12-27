@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-chart-bar"></i> Reports & Analytics</h1>
+        <p class="lead">Comprehensive mapping analysis and performance metrics</p>
+    </div>
+</div>
+
+<!-- Report Selection -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-file-alt"></i> Available Reports</h5>
+            </div>
+            <div class="card-body">
+                {% if reports %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Report</th>
+                                    <th>Generated</th>
+                                    <th>Tenants</th>
+                                    <th>Success Rate</th>
+                                    <th>High Confidence</th>
+                                    <th>HITL Review</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in reports %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-alt"></i> {{ report.filename }}
+                                    </td>
+                                    <td>{{ report.created_at }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ report.metadata.total_tenants }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ "%.1f"|format(report.summary_statistics.mapping_success_rate) }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ report.summary_statistics.high_confidence_mappings }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning">
+                                            {{ report.summary_statistics.medium_confidence_mappings }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewReport('{{ report.filename }}')">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="downloadReport('{{ report.filename }}')">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-file-alt fa-3x mb-3"></i>
+                        <h5>No Reports Available</h5>
+                        <p>Generate reports by running the mapping analysis.</p>
+                        <button class="btn btn-primary" onclick="generateReport()">
+                            <i class="fas fa-plus"></i> Generate Report
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Details (shown when viewing a report) -->
+<div id="reportDetails" class="row d-none">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-chart-line"></i> Report Analysis</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="closeReport()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="reportContent">
+                    <!-- Report content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+{% if reports %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Overall Statistics</h5>
+            </div>
+            <div class="card-body">
+                {% set latest_report = reports[0] %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-value">{{ latest_report.metadata.total_tenants }}</div>
+                            <div>Total Tenants</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-value">{{ latest_report.metadata.total_tables }}</div>
+                            <div>Total Tables</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-value">{{ latest_report.metadata.total_columns }}</div>
+                            <div>Total Columns</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-value">{{ "{:,}".format(latest_report.metadata.total_records) }}</div>
+                            <div>Total Records</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <h6>Confidence Distribution</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" style="width: {{ (latest_report.summary_statistics.high_confidence_mappings / latest_report.metadata.total_columns * 100)|round(1) }}%">
+                                High: {{ latest_report.summary_statistics.high_confidence_mappings }}
+                            </div>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-warning" style="width: {{ (latest_report.summary_statistics.medium_confidence_mappings / latest_report.metadata.total_columns * 100)|round(1) }}%">
+                                Medium: {{ latest_report.summary_statistics.medium_confidence_mappings }}
+                            </div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-danger" style="width: {{ (latest_report.summary_statistics.low_confidence_mappings / latest_report.metadata.total_columns * 100)|round(1) }}%">
+                                Low: {{ latest_report.summary_statistics.low_confidence_mappings }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Mapping Success</h6>
+                        <div class="text-center">
+                            <div class="display-4 text-success">{{ "%.1f"|format(latest_report.summary_statistics.mapping_success_rate) }}%</div>
+                            <p class="text-muted">Overall Success Rate</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Transformations</h6>
+                        <div class="text-center">
+                            <div class="display-4 text-info">{{ latest_report.summary_statistics.transformations_needed }}</div>
+                            <p class="text-muted">Transformations Needed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tenant Breakdown -->
+{% if reports %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-building"></i> Tenant Analysis</h5>
+            </div>
+            <div class="card-body">
+                {% set latest_report = reports[0] %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Tables</th>
+                                <th>Columns</th>
+                                <th>Records</th>
+                                <th>Data Types</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tenant, analysis in latest_report.tenant_analysis.schema_complexity.items() %}
+                            <tr>
+                                <td>
+                                    <strong>{{ analysis.name }}</strong><br>
+                                    <small class="text-muted">{{ tenant }}</small>
+                                </td>
+                                <td><span class="badge bg-primary">{{ analysis.tables }}</span></td>
+                                <td><span class="badge bg-info">{{ analysis.columns }}</span></td>
+                                <td>
+                                    {% set tenant_data = latest_report.tenant_analysis.data_characteristics[tenant] %}
+                                    <span class="badge bg-secondary">{{ "{:,}".format(tenant_data.total_records) }}</span>
+                                </td>
+                                <td><span class="badge bg-success">{{ analysis.data_types }}</span></td>
+                                <td>
+                                    <span class="badge bg-success">Complete</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewReport(filename) {
+    // In a real implementation, this would load the actual report data
+    const reportDetails = document.getElementById('reportDetails');
+    const reportContent = document.getElementById('reportContent');
+    
+    reportContent.innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading report: ${filename}</p>
+        </div>
+    `;
+    
+    reportDetails.classList.remove('d-none');
+    
+    // Simulate loading
+    setTimeout(() => {
+        reportContent.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                Report viewer would display detailed analysis here.
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Mapping Details</h6>
+                    <p>Detailed column-by-column mapping analysis would be shown here.</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Confidence Analysis</h6>
+                    <p>Confidence score breakdown and reasoning would be displayed here.</p>
+                </div>
+            </div>
+        `;
+    }, 1000);
+}
+
+function closeReport() {
+    document.getElementById('reportDetails').classList.add('d-none');
+}
+
+function downloadReport(filename) {
+    // In a real implementation, this would trigger a download
+    alert(`Downloading report: ${filename}`);
+}
+
+function generateReport() {
+    if (confirm('Generate new mapping analysis report? This may take a few minutes.')) {
+        // In a real implementation, this would trigger report generation
+        alert('Report generation would be initiated here. Check the terminal for progress.');
+    }
+}
+</script>
+{% endblock %}

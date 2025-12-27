@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Interaction Logs - Schema Translator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .log-entry {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .prompt-section, .response-section {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        .response-section {
+            border-left-color: #28a745;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-badge {
+            font-size: 0.8em;
+            padding: 4px 8px;
+        }
+        .mapping-details {
+            background: #e3f2fd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-brain me-2"></i>Schema Translator
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/schema-analysis">Schema Analysis</a>
+                <a class="nav-link active" href="/llm-logs">LLM Logs</a>
+                <a class="nav-link" href="/hitl">HITL Review</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-terminal me-2"></i>LLM Interaction Logs</h1>
+                <p class="text-muted">Detailed logs of LLM prompts and responses for schema mapping</p>
+                
+                <!-- Tenant Selection -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-database me-2"></i>Select Tenant</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <select class="form-select" id="tenantSelect">
+                                    <option value="">Select a tenant...</option>
+                                    <option value="tenant_A">tenant_A - USAspending (Federal Contracts)</option>
+                                    <option value="tenant_B">tenant_B - World Bank (Development Projects)</option>
+                                    <option value="tenant_C">tenant_C - UK OCDS (Government Procurement)</option>
+                                    <option value="tenant_D">tenant_D - World Bank Finance (Corporate)</option>
+                                    <option value="tenant_E">tenant_E - FPDS (Contract Actions)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-primary" onclick="loadLLMLogs()">
+                                    <i class="fas fa-play me-2"></i>Load LLM Logs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="loading" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Processing LLM interactions...</p>
+                </div>
+
+                <!-- Logs Container -->
+                <div id="logsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function loadLLMLogs() {
+            const tenant = document.getElementById('tenantSelect').value;
+            if (!tenant) {
+                alert('Please select a tenant');
+                return;
+            }
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const logsContainer = document.getElementById('logsContainer');
+            
+            loadingIndicator.style.display = 'block';
+            logsContainer.innerHTML = '';
+
+            fetch(`/api/llm-logs/${tenant}`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingIndicator.style.display = 'none';
+                    displayLogs(data);
+                })
+                .catch(error => {
+                    loadingIndicator.style.display = 'none';
+                    logsContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading LLM logs: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+
+        function displayLogs(data) {
+            const container = document.getElementById('logsContainer');
+            
+            if (data.error) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${data.error}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Analysis Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Tenant:</strong> ${data.tenant}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total Columns:</strong> ${data.total_columns}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Processed:</strong> ${data.processed_columns}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Model:</strong> ${data.logs[0]?.model_used || 'Unknown'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            data.logs.forEach(log => {
+                html += createLogEntry(log);
+            });
+
+            container.innerHTML = html;
+        }
+
+        function createLogEntry(log) {
+            const statusClass = log.api_status === 'success' ? 'success' : 'danger';
+            const statusIcon = log.api_status === 'success' ? 'check-circle' : 'exclamation-triangle';
+            
+            let html = `
+                <div class="log-entry">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="fas fa-columns me-2"></i>${log.source_column}</h5>
+                        <span class="badge bg-${statusClass} status-badge">
+                            <i class="fas fa-${statusIcon} me-1"></i>${log.api_status.toUpperCase()}
+                        </span>
+                    </div>
+            `;
+
+            if (log.error) {
+                html += `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error: ${log.error}
+                    </div>
+                `;
+            } else {
+                // Prompt Details
+                html += `
+                    <div class="prompt-section">
+                        <h6><i class="fas fa-paper-plane me-2"></i>Prompt Sent to LLM</h6>
+                        <div class="mb-2">
+                            <strong>System Prompt:</strong>
+                            <div class="code-block">${log.prompt_details.system_prompt}</div>
+                        </div>
+                        <div class="mb-2">
+                            <strong>User Prompt:</strong>
+                            <div class="code-block">${log.prompt_details.user_prompt}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Prompt Length: ${log.prompt_details.prompt_length} characters</small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Model: ${log.model_used}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Response Details
+                html += `
+                    <div class="response-section">
+                        <h6><i class="fas fa-reply me-2"></i>LLM Response</h6>
+                        <div class="mb-2">
+                            <strong>Reasoning:</strong>
+                            <div class="code-block">${log.response_details.reasoning || 'No reasoning provided'}</div>
+                        </div>
+                `;
+
+                if (log.response_details.proposed_mappings) {
+                    html += `
+                        <div class="mb-2">
+                            <strong>Proposed Mappings (${log.response_details.proposed_mappings_count}):</strong>
+                    `;
+                    log.response_details.proposed_mappings.forEach((mapping, index) => {
+                        html += `
+                            <div class="card mt-2">
+                                <div class="card-body">
+                                    <h6>Mapping ${index + 1}</h6>
+                                    <p><strong>Canonical Field:</strong> ${mapping.canonical_field}</p>
+                                    <p><strong>Confidence:</strong> ${(mapping.confidence * 100).toFixed(1)}%</p>
+                                    <p><strong>Justification:</strong> ${mapping.justification}</p>
+                                    <p><strong>Assumptions:</strong> ${mapping.assumptions ? mapping.assumptions.join(', ') : 'None'}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+
+                if (log.response_details.alternatives) {
+                    html += `
+                        <div class="mb-2">
+                            <strong>Alternatives (${log.response_details.alternatives_count}):</strong>
+                    `;
+                    log.response_details.alternatives.forEach((alt, index) => {
+                        html += `
+                            <div class="card mt-2">
+                                <div class="card-body">
+                                    <h6>Alternative ${index + 1}</h6>
+                                    <p><strong>Canonical Field:</strong> ${alt.canonical_field}</p>
+                                    <p><strong>Confidence:</strong> ${(alt.confidence * 100).toFixed(1)}%</p>
+                                    <p><strong>Note:</strong> ${alt.note}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+
+                html += `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Response Length: ${log.response_details.response_length} characters</small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Processing Time: ${log.processing_time}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Final Mapping
+                html += `
+                    <div class="mapping-details">
+                        <h6><i class="fas fa-arrow-right me-2"></i>Final Mapping Result</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Canonical Field:</strong> ${log.final_mapping.canonical_field}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Confidence:</strong> ${(log.final_mapping.confidence * 100).toFixed(1)}%
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Status:</strong> 
+                                <span class="badge bg-${log.final_mapping.status === 'accepted' ? 'success' : 'warning'}">
+                                    ${log.final_mapping.status}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+    </script>
+</body>
+</html>

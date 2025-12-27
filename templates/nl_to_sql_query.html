@@ -1,0 +1,1017 @@
+{% extends "base.html" %}
+
+{% block title %}Ask Anything - Natural Language Query{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Color scheme and design system */
+    :root {
+        --primary-blue: #3B82F6;
+        --success-green: #10B981;
+        --warning-yellow: #F59E0B;
+        --error-red: #EF4444;
+        --gray-50: #F9FAFB;
+        --gray-100: #F3F4F6;
+        --gray-200: #E5E7EB;
+        --gray-400: #9CA3AF;
+        --gray-600: #6B7280;
+        --gray-900: #1F2937;
+        --spacing-4: 1rem;
+        --spacing-6: 1.5rem;
+        --spacing-8: 2rem;
+        --border-radius: 12px;
+        --border-radius-sm: 8px;
+    }
+
+    /* Base layout */
+    .nl-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+        min-height: 100vh;
+        background: linear-gradient(135deg, var(--gray-50) 0%, #ffffff 100%);
+    }
+
+    /* Header section */
+    .nl-header {
+        text-align: center;
+        margin-bottom: var(--spacing-8);
+    }
+
+    .nl-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-4);
+        font-family: 'Inter', sans-serif;
+    }
+
+    .nl-subtitle {
+        font-size: 1.25rem;
+        color: var(--gray-600);
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Main sections */
+    .nl-section {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: var(--spacing-6);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .nl-section.hidden {
+        display: none;
+    }
+
+    .nl-section.visible {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+        margin-bottom: var(--spacing-6);
+    }
+
+    .section-header {
+        padding: var(--spacing-6);
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-4);
+    }
+
+    .section-icon {
+        font-size: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0;
+    }
+
+    .section-confidence {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+    }
+
+    .section-content {
+        padding: var(--spacing-6);
+    }
+
+    /* Question input section */
+    .question-input {
+        width: 100%;
+        min-height: 120px;
+        padding: var(--spacing-4);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--border-radius-sm);
+        font-size: 1.1rem;
+        font-family: inherit;
+        resize: vertical;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .question-input:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .question-input::placeholder {
+        color: var(--gray-400);
+        font-style: italic;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+        display: flex;
+        gap: var(--spacing-4);
+        margin-top: var(--spacing-4);
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--border-radius-sm);
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: var(--primary-blue);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2563EB;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        border: 1px solid var(--gray-200);
+    }
+
+    .btn-secondary:hover {
+        background: var(--gray-200);
+        transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Popular questions tags */
+    .popular-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: var(--spacing-4);
+    }
+
+    .tag {
+        background: var(--gray-100);
+        color: var(--gray-600);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid var(--gray-200);
+    }
+
+    .tag:hover {
+        background: var(--primary-blue);
+        color: white;
+        transform: scale(1.05);
+    }
+
+    /* Loading animation */
+    .loading {
+        display: none;
+        text-align: center;
+        padding: var(--spacing-6);
+    }
+
+    .loading.active {
+        display: block;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid var(--gray-200);
+        border-top: 4px solid var(--primary-blue);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto var(--spacing-4);
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-steps {
+        text-align: left;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .loading-step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        color: var(--gray-600);
+        opacity: 0.5;
+        transition: all 0.3s ease;
+    }
+
+    .loading-step.active {
+        color: var(--primary-blue);
+        opacity: 1;
+        font-weight: 500;
+    }
+
+    .loading-step.completed {
+        color: var(--success-green);
+        opacity: 1;
+    }
+
+    .loading-step-icon {
+        font-size: 1.2rem;
+    }
+
+    /* Intent analysis display */
+    .intent-analysis {
+        display: grid;
+        gap: var(--spacing-4);
+    }
+
+    .intent-summary {
+        background: var(--gray-50);
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius-sm);
+        border-left: 4px solid var(--primary-blue);
+    }
+
+    .intent-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-4);
+    }
+
+    .detail-card {
+        background: var(--gray-50);
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--gray-200);
+    }
+
+    .detail-title {
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .detail-content {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+    }
+
+    .field-list, .condition-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .field-list li, .condition-list li {
+        padding: 0.25rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .field-list li:before {
+        content: "✓";
+        color: var(--success-green);
+        font-weight: bold;
+    }
+
+    .condition-list li:before {
+        content: "→";
+        color: var(--primary-blue);
+        font-weight: bold;
+    }
+
+    /* Confidence indicator */
+    .confidence-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        transition: width 1s ease-in-out;
+        border-radius: 4px;
+    }
+
+    .confidence-high { background: var(--success-green); }
+    .confidence-medium { background: var(--warning-yellow); }
+    .confidence-low { background: var(--error-red); }
+
+    /* Assumptions and clarifications */
+    .assumptions-card, .clarifications-card {
+        margin-top: var(--spacing-4);
+    }
+
+    .assumption-item, .clarification-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .assumption-item:last-child, .clarification-item:last-child {
+        border-bottom: none;
+    }
+
+    .assumption-icon {
+        color: var(--warning-yellow);
+        margin-top: 0.1rem;
+    }
+
+    .clarification-icon {
+        color: var(--error-red);
+        margin-top: 0.1rem;
+    }
+
+    /* SQL display */
+    .sql-container {
+        background: var(--gray-900);
+        color: #e5e7eb;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+        font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+    }
+
+    .sql-header {
+        background: var(--gray-800);
+        padding: var(--spacing-4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--gray-700);
+    }
+
+    .sql-title {
+        font-weight: 600;
+        color: white;
+    }
+
+    .sql-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .sql-btn {
+        background: var(--gray-700);
+        color: white;
+        border: 1px solid var(--gray-600);
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .sql-btn:hover {
+        background: var(--gray-600);
+    }
+
+    .sql-content {
+        padding: var(--spacing-4);
+        line-height: 1.6;
+        font-size: 0.9rem;
+        position: relative;
+    }
+
+    .sql-line {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.25rem;
+    }
+
+    .sql-line-number {
+        color: var(--gray-400);
+        margin-right: 1rem;
+        min-width: 2rem;
+        text-align: right;
+        user-select: none;
+        font-size: 0.8rem;
+    }
+
+    .sql-line-content {
+        flex: 1;
+    }
+
+    /* SQL syntax highlighting */
+    .sql-keyword { color: #60A5FA; font-weight: 600; }
+    .sql-string { color: #34D399; }
+    .sql-number { color: #FBBF24; }
+    .sql-comment { color: var(--gray-400); font-style: italic; }
+    .sql-operator { color: #F87171; }
+    .sql-function { color: #A78BFA; }
+
+    /* Query analysis */
+    .query-analysis {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-4);
+        margin-top: var(--spacing-4);
+    }
+
+    .analysis-card {
+        background: var(--gray-50);
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--gray-200);
+    }
+
+    .analysis-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .analysis-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+    }
+
+    .analysis-label {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+
+    /* Validation results */
+    .validation-results {
+        margin-top: var(--spacing-4);
+    }
+
+    .validation-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+
+    .validation-icon {
+        font-size: 1.2rem;
+    }
+
+    .validation-success { color: var(--success-green); }
+    .validation-warning { color: var(--warning-yellow); }
+    .validation-error { color: var(--error-red); }
+
+    /* Examples modal */
+    .examples-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .examples-overlay.active {
+        display: flex;
+    }
+
+    .examples-modal {
+        background: white;
+        border-radius: var(--border-radius);
+        max-width: 800px;
+        max-height: 80vh;
+        overflow: auto;
+        margin: var(--spacing-4);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .examples-header {
+        padding: var(--spacing-6);
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .examples-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0;
+    }
+
+    .examples-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--gray-400);
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: color 0.2s ease;
+    }
+
+    .examples-close:hover {
+        color: var(--gray-600);
+    }
+
+    .examples-content {
+        padding: var(--spacing-6);
+    }
+
+    .examples-category {
+        margin-bottom: var(--spacing-6);
+    }
+
+    .examples-category:last-child {
+        margin-bottom: 0;
+    }
+
+    .category-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-4);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .category-icon {
+        font-size: 1.2rem;
+    }
+
+    .example-items {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .example-item {
+        background: var(--gray-50);
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--gray-200);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
+
+    .example-item:hover {
+        background: var(--primary-blue);
+        color: white;
+        border-color: var(--primary-blue);
+        transform: translateY(-1px);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .nl-container {
+            padding: var(--spacing-4);
+        }
+
+        .nl-title {
+            font-size: 2rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .intent-details {
+            grid-template-columns: 1fr;
+        }
+
+        .query-analysis {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .examples-modal {
+            margin: var(--spacing-4);
+            max-height: 90vh;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .query-analysis {
+            grid-template-columns: 1fr;
+        }
+
+        .popular-tags {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nl-container">
+    <!-- Header -->
+    <div class="nl-header">
+        <h1 class="nl-title">💬 Ask Anything</h1>
+        <p class="nl-subtitle">
+            Ask questions about your contract data in natural language. 
+            I'll understand your intent and generate the right queries across all your customer schemas.
+        </p>
+    </div>
+
+    <!-- Question Input Section -->
+    <div class="nl-section visible" id="question-section">
+        <div class="section-header">
+            <span class="section-icon">🗣️</span>
+            <h2 class="section-title">Ask Your Question</h2>
+        </div>
+        <div class="section-content">
+            <textarea 
+                id="question-input" 
+                class="question-input" 
+                placeholder="Try asking: &quot;Show me all active contracts worth more than $100,000 that are expiring in Q1 2025&quot;
+
+Or try:
+• &quot;Which contracts expire next month?&quot;
+• &quot;Show high-value contracts with Acme Corp&quot;
+• &quot;List all terminated contracts from 2024&quot;"
+                rows="5"
+            ></textarea>
+
+            <div class="action-buttons">
+                <button id="analyze-btn" class="btn btn-primary" onclick="handleAnalyzeClick()">
+                    🎯 Analyze Question
+                </button>
+                <button id="examples-btn" class="btn btn-secondary">
+                    💡 See Examples
+                </button>
+                <button id="clear-btn" class="btn btn-secondary">
+                    🔄 Clear
+                </button>
+            </div>
+
+            <div class="popular-tags">
+                <span class="tag" data-query="Show me all active contracts">🔸 Active contracts</span>
+                <span class="tag" data-query="Which contracts expire next month?">🔸 Expiring soon</span>
+                <span class="tag" data-query="Show contracts worth more than $500,000">🔸 High value</span>
+                <span class="tag" data-query="List contracts with Microsoft">🔸 By supplier</span>
+                <span class="tag" data-query="Count active contracts by status">🔸 Analytics</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Section -->
+    <div class="loading" id="loading-section">
+        <div class="loading-spinner"></div>
+        <h3>Analyzing Your Question...</h3>
+        <div class="loading-steps">
+            <div class="loading-step" id="step-parsing">
+                <span class="loading-step-icon">⏳</span>
+                <span>Parsing natural language...</span>
+            </div>
+            <div class="loading-step" id="step-intent">
+                <span class="loading-step-icon">⏳</span>
+                <span>Identifying entities and intent...</span>
+            </div>
+            <div class="loading-step" id="step-mapping">
+                <span class="loading-step-icon">⏳</span>
+                <span>Mapping to canonical schema...</span>
+            </div>
+            <div class="loading-step" id="step-validation">
+                <span class="loading-step-icon">⏳</span>
+                <span>Validating against business logic...</span>
+            </div>
+            <div class="loading-step" id="step-sql">
+                <span class="loading-step-icon">⏳</span>
+                <span>Generating SQL query...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Intent Analysis Section -->
+    <div class="nl-section hidden" id="intent-section">
+        <div class="section-header">
+            <span class="section-icon">🧠</span>
+            <h2 class="section-title">Understanding Your Question</h2>
+            <div class="section-confidence">
+                <span id="intent-confidence-text">92%</span>
+                <div class="confidence-bar">
+                    <div class="confidence-fill confidence-high" id="intent-confidence-bar" style="width: 92%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="section-content">
+            <div class="intent-analysis">
+                <div class="intent-summary">
+                    <h3>🎯 Detected Intent</h3>
+                    <p id="intent-summary-text">I'm looking for contracts that are active, worth more than $100,000, and expiring between Jan 1 - Mar 31, 2025.</p>
+                </div>
+
+                <div class="intent-details">
+                    <div class="detail-card">
+                        <div class="detail-title">
+                            <span>📊</span>
+                            Primary Entity
+                        </div>
+                        <div class="detail-content" id="primary-entity">
+                            Contracts
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-title">
+                            <span>📋</span>
+                            Requested Fields
+                        </div>
+                        <div class="detail-content">
+                            <ul class="field-list" id="requested-fields">
+                                <li>contract_id</li>
+                                <li>contract_value</li>
+                                <li>expiry_date</li>
+                                <li>status</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-title">
+                            <span>🔍</span>
+                            Filter Conditions
+                        </div>
+                        <div class="detail-content">
+                            <ul class="condition-list" id="filter-conditions">
+                                <li>status = 'active'</li>
+                                <li>contract_value > 100000</li>
+                                <li>expiry_date BETWEEN '2025-01-01' AND '2025-03-31'</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-title">
+                            <span>📅</span>
+                            Date Ranges
+                        </div>
+                        <div class="detail-content" id="date-ranges">
+                            Q1 2025: January 1 - March 31, 2025
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assumptions and Clarifications -->
+                <div class="assumptions-card detail-card" id="assumptions-card" style="display: none;">
+                    <div class="detail-title">
+                        <span>💭</span>
+                        Assumptions Made
+                    </div>
+                    <div class="detail-content" id="assumptions-content">
+                        <!-- Assumptions will be populated here -->
+                    </div>
+                </div>
+
+                <div class="clarifications-card detail-card" id="clarifications-card" style="display: none;">
+                    <div class="detail-title">
+                        <span>❓</span>
+                        Need Clarification?
+                    </div>
+                    <div class="detail-content" id="clarifications-content">
+                        <!-- Clarifications will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="generate-sql-btn" class="btn btn-primary">
+                    ✅ This Looks Good - Generate SQL
+                </button>
+                <button id="refine-btn" class="btn btn-secondary">
+                    ✏️ Refine Question
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SQL Generation Section -->
+    <div class="nl-section hidden" id="sql-section">
+        <div class="section-header">
+            <span class="section-icon">📝</span>
+            <h2 class="section-title">Generated Canonical SQL Query</h2>
+        </div>
+        <div class="section-content">
+            <div class="sql-container">
+                <div class="sql-header">
+                    <div class="sql-title">Canonical SQL Query</div>
+                    <div class="sql-actions">
+                        <button id="copy-sql-btn" class="sql-btn">📋 Copy</button>
+                        <button id="edit-sql-btn" class="sql-btn">✏️ Edit</button>
+                    </div>
+                </div>
+                <div class="sql-content" id="sql-content">
+                    <!-- SQL will be populated here -->
+                </div>
+            </div>
+
+            <!-- Query Analysis -->
+            <div class="query-analysis">
+                <div class="analysis-card">
+                    <div class="analysis-icon">📊</div>
+                    <div class="analysis-value" id="tables-count">1</div>
+                    <div class="analysis-label">Tables</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-icon">🔍</div>
+                    <div class="analysis-value" id="conditions-count">3</div>
+                    <div class="analysis-label">Conditions</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-icon">📋</div>
+                    <div class="analysis-value" id="fields-count">4</div>
+                    <div class="analysis-label">Fields</div>
+                </div>
+                <div class="analysis-card">
+                    <div class="analysis-icon">⚡</div>
+                    <div class="analysis-value" id="complexity">Simple</div>
+                    <div class="analysis-label">Complexity</div>
+                </div>
+            </div>
+
+            <!-- Validation Results -->
+            <div class="validation-results">
+                <h4>✅ Validation Results</h4>
+                <div class="validation-item">
+                    <span class="validation-icon validation-success">☑</span>
+                    <span>SQL Syntax: Valid</span>
+                </div>
+                <div class="validation-item">
+                    <span class="validation-icon validation-success">☑</span>
+                    <span>Schema Check: All fields exist in canonical schema</span>
+                </div>
+                <div class="validation-item">
+                    <span class="validation-icon validation-success">☑</span>
+                    <span>Data Types: Compatible</span>
+                </div>
+                <div class="validation-item">
+                    <span class="validation-icon validation-success">☑</span>
+                    <span>Business Logic: Valid date range</span>
+                </div>
+                <div class="validation-item">
+                    <span class="validation-icon validation-success">☑</span>
+                    <span>Query Optimization: Already optimal</span>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="translate-btn" class="btn btn-primary">
+                    ▶️ Translate to Customer Schemas
+                </button>
+                <button id="copy-btn" class="btn btn-secondary">
+                    📋 Copy SQL
+                </button>
+                <button id="new-question-btn" class="btn btn-secondary">
+                    🔄 Ask Another Question
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Translation Results -->
+    <div class="nl-section hidden" id="translation-section">
+        <div class="section-header">
+            <span class="section-icon">🎯</span>
+            <h2 class="section-title">Customer-Specific Translations</h2>
+        </div>
+        <div class="section-content">
+            <p>Your canonical SQL query has been translated for each customer's specific schema...</p>
+            <div id="translation-results">
+                <!-- Translation results will be loaded here from existing system -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Examples Modal -->
+<div class="examples-overlay" id="examples-overlay">
+    <div class="examples-modal">
+        <div class="examples-header">
+            <h2 class="examples-title">💡 Example Questions</h2>
+            <button class="examples-close" id="examples-close">&times;</button>
+        </div>
+        <div class="examples-content">
+            <div class="examples-category">
+                <div class="category-title">
+                    <span class="category-icon">🔰</span>
+                    Getting Started
+                </div>
+                <div class="example-items">
+                    <div class="example-item" data-query="Show me all active contracts">Show me all active contracts</div>
+                    <div class="example-item" data-query="Which contracts expire next month?">Which contracts expire next month?</div>
+                    <div class="example-item" data-query="List all contracts from 2024">List all contracts from 2024</div>
+                    <div class="example-item" data-query="How many contracts do we have?">How many contracts do we have?</div>
+                </div>
+            </div>
+
+            <div class="examples-category">
+                <div class="category-title">
+                    <span class="category-icon">💰</span>
+                    Value-Based Queries
+                </div>
+                <div class="example-items">
+                    <div class="example-item" data-query="Show contracts worth more than $500,000">Show contracts worth more than $500,000</div>
+                    <div class="example-item" data-query="What are our highest value contracts?">What are our highest value contracts?</div>
+                    <div class="example-item" data-query="Find contracts between $100K and $1M">Find contracts between $100K and $1M</div>
+                    <div class="example-item" data-query="Which contracts are under $50,000?">Which contracts are under $50,000?</div>
+                </div>
+            </div>
+
+            <div class="examples-category">
+                <div class="category-title">
+                    <span class="category-icon">📅</span>
+                    Time-Based Queries
+                </div>
+                <div class="example-items">
+                    <div class="example-item" data-query="Contracts expiring in the next 30 days">Contracts expiring in the next 30 days</div>
+                    <div class="example-item" data-query="Show contracts created this quarter">Show contracts created this quarter</div>
+                    <div class="example-item" data-query="Which contracts expired last year?">Which contracts expired last year?</div>
+                    <div class="example-item" data-query="Find contracts signed in Q1 2024">Find contracts signed in Q1 2024</div>
+                </div>
+            </div>
+
+            <div class="examples-category">
+                <div class="category-title">
+                    <span class="category-icon">🏢</span>
+                    Party-Based Queries
+                </div>
+                <div class="example-items">
+                    <div class="example-item" data-query="Show all contracts with Acme Corporation">Show all contracts with Acme Corporation</div>
+                    <div class="example-item" data-query="Which suppliers have active contracts?">Which suppliers have active contracts?</div>
+                    <div class="example-item" data-query="Find contracts for government agencies">Find contracts for government agencies</div>
+                    <div class="example-item" data-query="List all contracts with Microsoft">List all contracts with Microsoft</div>
+                </div>
+            </div>
+
+            <div class="examples-category">
+                <div class="category-title">
+                    <span class="category-icon">📊</span>
+                    Complex Queries
+                </div>
+                <div class="example-items">
+                    <div class="example-item" data-query="Show me the total value of all active contracts">Show me the total value of all active contracts</div>
+                    <div class="example-item" data-query="Which contracts were amended in the last 6 months?">Which contracts were amended in the last 6 months?</div>
+                    <div class="example-item" data-query="Compare Q1 vs Q2 contract values">Compare Q1 vs Q2 contract values</div>
+                    <div class="example-item" data-query="Average contract value by supplier">Average contract value by supplier</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/nl_to_sql.js') }}"></script>
+{% endblock %}

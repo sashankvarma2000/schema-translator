@@ -1,0 +1,212 @@
+tenant: tenant_A
+description: "USAspending Multi-Table Schema - Real federal procurement with proper relational structure"
+
+tables:
+  awards:
+    description: "Prime awards list with key identifiers and basic award information"
+    columns:
+      generated_unique_award_id:
+        type: "varchar(200)"
+        nullable: false
+        description: "USAspending generated unique award identifier (primary key)"
+      
+      piid:
+        type: "varchar(50)"
+        nullable: true
+        description: "Procurement Instrument Identifier (PIID) - contract number"
+      
+      award_type:
+        type: "varchar(100)"
+        nullable: true
+        description: "Contract award type (DEFINITIVE CONTRACT, etc.)"
+      
+      recipient_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Foreign key to recipients table"
+      
+      awarding_agency_code:
+        type: "varchar(10)"
+        nullable: true
+        description: "Foreign key to agencies table (awarding)"
+      
+      funding_agency_code:
+        type: "varchar(10)"
+        nullable: true
+        description: "Foreign key to agencies table (funding)"
+      
+      period_start:
+        type: "date"
+        nullable: true
+        description: "Period of Performance start date"
+      
+      period_end:
+        type: "date"
+        nullable: true
+        description: "Period of Performance end date"
+      
+      current_total_value:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Current total award value (updated by latest transaction)"
+      
+      base_obligation_date:
+        type: "date"
+        nullable: true
+        description: "Initial award obligation date"
+      
+      last_modified_date:
+        type: "date"
+        nullable: true
+        description: "Last modification date"
+
+  transactions:
+    description: "Award action history - derive contract lifecycle and true current value"
+    columns:
+      transaction_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Unique transaction identifier"
+      
+      generated_unique_award_id:
+        type: "varchar(200)"
+        nullable: false
+        description: "Foreign key to awards table"
+      
+      action_date:
+        type: "date"
+        nullable: true
+        description: "Date of this award action"
+      
+      action_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of action (Initial Award, Modification, etc.)"
+      
+      obligated_amount:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Amount obligated in this transaction"
+      
+      federal_action_obligation:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Federal action obligation amount"
+      
+      current_total_value:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Cumulative total value after this action"
+      
+      modification_number:
+        type: "varchar(10)"
+        nullable: true
+        description: "Modification sequence number"
+
+  agencies:
+    description: "Awarding and funding agency reference data"
+    columns:
+      agency_code:
+        type: "varchar(10)"
+        nullable: false
+        description: "Agency code (primary key)"
+      
+      agency_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Full agency name"
+      
+      agency_type:
+        type: "varchar(20)"
+        nullable: true
+        description: "Agency role (awarding, funding)"
+
+  recipients:
+    description: "Contractor/recipient reference data with UEI/DUNS identifiers"
+    columns:
+      recipient_id:
+        type: "varchar(100)"
+        nullable: false
+        description: "USAspending recipient identifier (primary key)"
+      
+      legal_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Legal business name of recipient"
+      
+      uei:
+        type: "varchar(20)"
+        nullable: true
+        description: "Unique Entity Identifier (UEI)"
+      
+      duns_number:
+        type: "varchar(20)"
+        nullable: true
+        description: "Data Universal Numbering System (DUNS) number"
+
+  subawards:
+    description: "Subaward data linked to prime awards (optional table)"
+    columns:
+      subaward_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal subaward identifier (primary key)"
+      
+      prime_award_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Prime Award ID linking to awards"
+      
+      sub_award_id:
+        type: "varchar(100)"
+        nullable: true
+        description: "Sub-Award identifier"
+      
+      sub_awardee_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Sub-awardee organization name"
+      
+      sub_award_amount:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Sub-award amount"
+      
+      sub_award_date:
+        type: "date"
+        nullable: true
+        description: "Sub-award date"
+      
+      sub_award_description:
+        type: "varchar(200)"
+        nullable: true
+        description: "Sub-award description (truncated)"
+      
+      sub_award_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of sub-award"
+      
+      sub_recipient_uei:
+        type: "varchar(20)"
+        nullable: true
+        description: "Sub-recipient UEI identifier"
+
+relationships:
+  - from_table: "awards"
+    from_column: "recipient_id"
+    to_table: "recipients"
+    to_column: "recipient_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "awards"
+    from_column: "awarding_agency_code"
+    to_table: "agencies"
+    to_column: "agency_code"
+    relationship_type: "many_to_one"
+  
+  - from_table: "transactions"
+    from_column: "generated_unique_award_id"
+    to_table: "awards"
+    to_column: "generated_unique_award_id"
+    relationship_type: "many_to_one"

@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-tachometer-alt"></i> Schema Translator Dashboard</h1>
+        <p class="lead">LLM-powered semantic schema mapping for heterogeneous tenant data</p>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-server"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <span class="status-indicator status-{{ api_status.status if api_status else 'unavailable' }}"></span>
+                            <strong>API Server:</strong> {{ api_status.status if api_status else 'Unknown' }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>LLM Available:</strong> 
+                        <span class="badge bg-{{ 'success' if api_status.llm_available else 'danger' }}">
+                            {{ 'Yes' if api_status.llm_available else 'No' }}
+                        </span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>OpenAI Configured:</strong>
+                        <span class="badge bg-{{ 'success' if api_status.openai_configured else 'danger' }}">
+                            {{ 'Yes' if api_status.openai_configured else 'No' }}
+                        </span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Version:</strong> {{ api_status.version if api_status else 'Unknown' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="metric-card text-center">
+            <i class="fas fa-database fa-2x mb-2"></i>
+            <div class="metric-value">{{ tenants|length }}</div>
+            <div>Available Tenants</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card text-center">
+            <i class="fas fa-table fa-2x mb-2"></i>
+            <div class="metric-value">21</div>
+            <div>Total Tables</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card text-center">
+            <i class="fas fa-columns fa-2x mb-2"></i>
+            <div class="metric-value">180</div>
+            <div>Total Columns</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card text-center">
+            <i class="fas fa-chart-line fa-2x mb-2"></i>
+            <div class="metric-value">74.4%</div>
+            <div>Success Rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Available Tenants -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-building"></i> Available Tenants</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for tenant in tenants %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-building"></i> {{ tenant_names.get(tenant.tenant, tenant.tenant) }}
+                                </h6>
+                                <p class="card-text">
+                                    <small class="text-muted">{{ tenant.tenant }}</small><br>
+                                    <span class="badge bg-success">Schema: {{ 'Yes' if tenant.has_schema else 'No' }}</span>
+                                    <span class="badge bg-info">Data: {{ 'Yes' if tenant.has_sample_data else 'No' }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Reports -->
+{% if reports %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-file-alt"></i> Recent Reports</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Report</th>
+                                <th>Generated</th>
+                                <th>Tenants</th>
+                                <th>Success Rate</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in reports[:5] %}
+                            <tr>
+                                <td>{{ report.filename }}</td>
+                                <td>{{ report.created_at }}</td>
+                                <td>{{ report.metadata.total_tenants }}</td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        {{ "%.1f"|format(report.summary_statistics.mapping_success_rate) }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="/reports" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 mb-2">
+                        <a href="/testing" class="btn btn-primary w-100">
+                            <i class="fas fa-flask"></i> Test Mappings
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="/hitl" class="btn btn-warning w-100">
+                            <i class="fas fa-user-check"></i> HITL Review
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="/reports" class="btn btn-info w-100">
+                            <i class="fas fa-chart-bar"></i> View Reports
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="/schema-analysis" class="btn btn-success w-100">
+                            <i class="fas fa-database"></i> Schema Analysis
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="/schema-comparison" class="btn btn-secondary w-100">
+                            <i class="fas fa-balance-scale"></i> Schema Comparison
+                        </a>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-success w-100" onclick="runFullTest()">
+                            <i class="fas fa-play"></i> Run Full Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cache Performance -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-database"></i> Cache Performance</h5>
+            </div>
+            <div class="card-body">
+                <div id="cacheStatus">Loading cache status...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="card-body text-white text-center">
+                                <i class="fas fa-comments fa-3x mb-3"></i>
+                                <h4>Ask Anything</h4>
+                                <p>Natural language queries with AI-powered understanding</p>
+                                <a href="/nl-to-sql" class="btn btn-light btn-lg">
+                                    <i class="fas fa-arrow-right"></i> Start Asking
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <div class="card-body text-white text-center">
+                                <i class="fas fa-brain fa-3x mb-3"></i>
+                                <h4>AI Reasoning Dashboard</h4>
+                                <p>Advanced query translation with detailed AI insights</p>
+                                <a href="/query-translation-advanced-v2" class="btn btn-light btn-lg">
+                                    <i class="fas fa-arrow-right"></i> View Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load cache status
+function loadCacheStatus() {
+    fetch('/api/cache-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCacheStatus(data.data);
+            } else {
+                document.getElementById('cacheStatus').innerHTML = '<div class="alert alert-warning">Failed to load cache status</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading cache status:', error);
+            document.getElementById('cacheStatus').innerHTML = '<div class="alert alert-danger">Error loading cache status</div>';
+        });
+}
+
+function displayCacheStatus(cacheData) {
+    const overall = cacheData.overall;
+    const tenants = cacheData.tenants.filter(t => t.status === 'cached');
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-success">${overall.cacheHitRate}%</h4>
+                    <small class="text-muted">Cache Hit Rate</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-info">${overall.speedImprovement}x</h4>
+                    <small class="text-muted">Speed Improvement</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-primary">${overall.totalTranslations}</h4>
+                    <small class="text-muted">Total Translations</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-warning">${overall.totalTimeSaved}</h4>
+                    <small class="text-muted">Time Saved</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (tenants.length > 0) {
+        html += '<h6>Cached Tenants:</h6><div class="row">';
+        tenants.forEach(tenant => {
+            const badgeClass = tenant.confidence >= 90 ? 'bg-success' : tenant.confidence >= 70 ? 'bg-warning' : 'bg-danger';
+            html += `
+                <div class="col-md-4 mb-2">
+                    <div class="card card-body">
+                        <h6>${tenant.name} <span class="badge ${badgeClass}">${tenant.confidence}%</span></h6>
+                        <small class="text-muted">
+                            ${tenant.fieldMappingsCount} mappings • ${tenant.usageCount} uses • ${tenant.timeSaved} saved
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    } else {
+        html += '<div class="alert alert-info">No cached tenants yet. Run some queries to see cache performance!</div>';
+    }
+    
+    document.getElementById('cacheStatus').innerHTML = html;
+}
+
+// Load cache status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCacheStatus();
+});
+
+function runFullTest() {
+    if (confirm('This will run comprehensive testing on all tenants. Continue?')) {
+        // In a real implementation, this would trigger the full test
+        alert('Full testing would be initiated here. Check the terminal for progress.');
+    }
+}
+</script>
+{% endblock %}

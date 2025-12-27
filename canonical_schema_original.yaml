@@ -1,0 +1,357 @@
+schema_name: "Canonical Contract Schema"
+derived_from:
+  standard: "Open Contracting Data Standard (OCDS)"
+  component: "Release Schema"
+  version: "1.1.5"
+  canonical_url: "https://standard.open-contracting.org/schema/1__1__5/release-schema.json"
+version: "1.0.0"
+
+# Notes:
+# - This is a pragmatic subset focused on contract-level analysis, flattened for ease of mapping.
+# - Field names follow OCDS semantics; flattened fields use suffixes like *_amount, *_currency, *_start, *_end.
+# - 'required: true' means "expected for this canonical model"; source tenants may still be missing values.
+# - The "extensions" section includes non-OCDS fields (ARR/LTV) so you can demo semantic disambiguation.
+
+fields:
+  releases:
+    description: "Top-level release identity from OCDS."
+    primary_key: [release_id]
+    fields:
+      - name: ocid
+        type: string
+        required: true
+        description: "Open Contracting ID for the contracting process."
+      - name: release_id
+        type: string
+        required: true
+        description: "Identifier for this release within the contracting process."
+      - name: release_date
+        type: datetime
+        required: true
+        description: "ISO 8601 date-time when the release was published."
+      - name: tag
+        type: array[string]
+        required: false
+        description: "Array of OCDS release tags (e.g., tender, award, contract)."
+      - name: initiation_type
+        type: enum
+        values: [tender, planning, direct]
+        required: false
+        description: "How the contracting process was initiated (OCDS initiationType)."
+      - name: language
+        type: string
+        required: false
+        description: "BCP47 language tag for the release."
+
+  parties:
+    description: "Organizations and entities involved (buyers, suppliers, procuring entities)."
+    primary_key: [party_id]
+    fields:
+      - name: party_id
+        type: string
+        required: true
+        description: "Party identifier (references awards/contrats via IDs)."
+      - name: name
+        type: string
+        required: true
+        description: "Common name of the organization or entity."
+      - name: roles
+        type: array[enum]
+        values: [buyer, procuringEntity, supplier, payer, payee, reviewBody]
+        required: true
+        description: "Roles that this party plays in the contracting process (OCDS parties.roles)."
+      - name: identifier_scheme
+        type: string
+        required: false
+        description: "Formal registry or scheme of the party identifier."
+      - name: identifier_id
+        type: string
+        required: false
+        description: "The party’s official identifier value within the scheme."
+      - name: legal_name
+        type: string
+        required: false
+        description: "Official legal name of the organization."
+      - name: address_street
+        type: string
+        required: false
+      - name: address_locality
+        type: string
+        required: false
+      - name: address_region
+        type: string
+        required: false
+      - name: address_postal_code
+        type: string
+        required: false
+      - name: address_country
+        type: string
+        required: false
+      - name: contact_name
+        type: string
+        required: false
+      - name: contact_email
+        type: string
+        required: false
+      - name: contact_telephone
+        type: string
+        required: false
+
+  awards:
+    description: "Award decisions and supplier assignments."
+    primary_key: [award_id]
+    fields:
+      - name: award_id
+        type: string
+        required: true
+        description: "Unique award identifier."
+      - name: release_id
+        type: string
+        required: true
+        description: "Foreign key to releases.release_id."
+      - name: title
+        type: string
+        required: false
+      - name: description
+        type: string
+        required: false
+      - name: status
+        type: enum
+        values: [pending, active, cancelled, unsuccessful]
+        required: false
+      - name: date
+        type: datetime
+        required: false
+        description: "Date the award decision was made."
+      - name: value_amount
+        type: number
+        required: false
+        description: "Total value of the award."
+      - name: value_currency
+        type: string
+        required: false
+        description: "ISO 4217 currency of the award value."
+      - name: supplier_party_ids
+        type: array[string]
+        required: false
+        description: "References to parties with role 'supplier'."
+
+  contracts:
+    description: "Contract objects derived from awards, including terms, value and period."
+    primary_key: [contract_id]
+    fields:
+      - name: contract_id
+        type: string
+        required: true
+        description: "Unique contract identifier."
+      - name: release_id
+        type: string
+        required: true
+        description: "Foreign key to releases.release_id."
+      - name: award_id
+        type: string
+        required: false
+        description: "Foreign key to awards.award_id."
+      - name: title
+        type: string
+        required: false
+      - name: description
+        type: string
+        required: false
+      - name: status
+        type: enum
+        values: [pending, active, cancelled, terminated, expired]
+        required: false
+      - name: date_signed
+        type: date
+        required: false
+        description: "Date the contract was signed (OCDS contracts.dateSigned)."
+      - name: period_start
+        type: date
+        required: false
+        description: "Contract period start date."
+      - name: period_end
+        type: date
+        required: false
+        description: "Contract period end date."
+      - name: value_amount
+        type: number
+        required: false
+        description: "Total value of the contract (OCDS contracts.value.amount)."
+      - name: value_currency
+        type: string
+        required: false
+        description: "Currency for the contract value (ISO 4217)."
+      - name: buyer_party_id
+        type: string
+        required: false
+        description: "Reference to party with role 'buyer' or 'procuringEntity'."
+      - name: supplier_party_ids
+        type: array[string]
+        required: false
+        description: "Suppliers on this contract."
+      - name: items_count
+        type: integer
+        required: false
+        description: "Count of contract line items."
+      - name: documents_count
+        type: integer
+        required: false
+        description: "Count of documents attached to the contract."
+      - name: amendments_count
+        type: integer
+        required: false
+      - name: amendment_latest_date
+        type: date
+        required: false
+      - name: implementation_milestones_count
+        type: integer
+        required: false
+      - name: implementation_transactions_count
+        type: integer
+        required: false
+
+  items:
+    description: "Line items (can appear under tender, award, or contract; here modeled at contract level)."
+    primary_key: [contract_id, item_id]
+    fields:
+      - name: contract_id
+        type: string
+        required: true
+      - name: item_id
+        type: string
+        required: true
+      - name: description
+        type: string
+        required: false
+      - name: classification_scheme
+        type: string
+        required: false
+      - name: classification_id
+        type: string
+        required: false
+      - name: quantity
+        type: number
+        required: false
+      - name: unit_name
+        type: string
+        required: false
+      - name: unit_value_amount
+        type: number
+        required: false
+      - name: unit_value_currency
+        type: string
+        required: false
+
+  documents:
+    description: "Documents associated with awards or contracts."
+    primary_key: [document_id]
+    fields:
+      - name: document_id
+        type: string
+        required: true
+      - name: related_entity_type
+        type: enum
+        values: [award, contract, tender, release]
+        required: true
+      - name: related_entity_id
+        type: string
+        required: true
+      - name: title
+        type: string
+        required: false
+      - name: description
+        type: string
+        required: false
+      - name: document_type
+        type: string
+        required: false
+      - name: url
+        type: string
+        required: false
+      - name: date_published
+        type: datetime
+        required: false
+      - name: date_modified
+        type: datetime
+        required: false
+      - name: language
+        type: string
+        required: false
+
+  implementation_transactions:
+    description: "Payment transactions during implementation."
+    primary_key: [transaction_id]
+    fields:
+      - name: transaction_id
+        type: string
+        required: true
+      - name: contract_id
+        type: string
+        required: true
+      - name: date
+        type: date
+        required: false
+      - name: amount
+        type: number
+        required: false
+      - name: currency
+        type: string
+        required: false
+      - name: payer_party_id
+        type: string
+        required: false
+      - name: payee_party_id
+        type: string
+        required: false
+
+extensions:
+  # Non-OCDS convenience fields to demo semantic normalization (clearly marked).
+  # If a tenant's `contract_value` means ARR vs LTV, map here while preserving OCDS value_*.
+  commercial_values:
+    fields:
+      - name: contract_value_arr_amount
+        type: number
+        required: false
+        description: "Annual Recurring Revenue amount (non-OCDS; for commercial SaaS contracts)."
+      - name: contract_value_arr_currency
+        type: string
+        required: false
+        description: "Currency of ARR (ISO 4217)."
+      - name: contract_value_ltv_amount
+        type: number
+        required: false
+        description: "Lifetime value amount (non-OCDS)."
+      - name: contract_value_ltv_currency
+        type: string
+        required: false
+        description: "Currency of LTV (ISO 4217)."
+
+lineage_and_governance:
+  required: true
+  description: "Metadata every canonical record should carry for auditability."
+  fields:
+    - name: source_tenant
+      type: string
+      required: true
+      description: "Origin tenant identifier."
+    - name: source_tables
+      type: array[string]
+      required: true
+      description: "List of source tables contributing to this canonical entity."
+    - name: mapping_version
+      type: string
+      required: true
+      description: "Version of the per-tenant Mapping Plan used."
+    - name: prompt_version
+      type: string
+      required: true
+      description: "Version of the LLM prompt template used for semantic mapping."
+    - name: canonical_schema_version
+      type: string
+      required: true
+      default: "1.0.0"
+    - name: confidence
+      type: number
+      required: false
+      description: "Overall confidence score for automated mappings (0-1)."

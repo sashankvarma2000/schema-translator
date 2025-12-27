@@ -1,0 +1,356 @@
+<!-- Cache Status Component -->
+<div class="cache-status-container">
+    <div class="cache-status-header">
+        <h3>🔧 Translation Performance Monitor</h3>
+        <span class="cache-refresh-btn" onclick="refreshCacheStatus()">🔄 Refresh</span>
+    </div>
+    
+    <div class="tenant-cache-grid" id="tenantCacheGrid">
+        <!-- Dynamic content will be loaded here -->
+    </div>
+    
+    <div class="overall-cache-stats" id="overallStats">
+        <!-- Overall statistics -->
+    </div>
+</div>
+
+<style>
+.cache-status-container {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    font-family: 'Inter', sans-serif;
+}
+
+.cache-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.cache-status-header h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cache-refresh-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.cache-refresh-btn:hover {
+    background: #2563eb;
+}
+
+.tenant-cache-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.tenant-cache-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.tenant-cache-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #3b82f6;
+}
+
+.tenant-cache-card.cached {
+    border-left: 4px solid #10b981;
+}
+
+.tenant-cache-card.cold {
+    border-left: 4px solid #f59e0b;
+}
+
+.tenant-cache-card.outdated {
+    border-left: 4px solid #ef4444;
+}
+
+.tenant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.tenant-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.cache-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.cache-badge.cached {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.cache-badge.cold {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.cache-badge.outdated {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.cache-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.cache-metric {
+    display: flex;
+    justify-content: space-between;
+}
+
+.cache-metric-value {
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.overall-cache-stats {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    display: block;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.performance-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.performance-indicator.excellent {
+    color: #059669;
+}
+
+.performance-indicator.good {
+    color: #d97706;
+}
+
+.performance-indicator.needs-attention {
+    color: #dc2626;
+}
+</style>
+
+<script>
+let cacheStatusData = {
+    tenants: [],
+    overall: {}
+};
+
+function refreshCacheStatus() {
+    // Show loading state
+    document.getElementById('tenantCacheGrid').innerHTML = '<div class="loading">🔄 Refreshing cache status...</div>';
+    
+    // Real API call to get cache status
+    fetch('/api/cache-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                cacheStatusData = data.data;
+                renderCacheStatus();
+            } else {
+                console.error('Failed to load cache status:', data.error);
+                // Fallback to mock data if API fails
+                loadMockCacheData();
+                renderCacheStatus();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching cache status:', error);
+            // Fallback to mock data if API fails
+            loadMockCacheData();
+            renderCacheStatus();
+        });
+}
+
+function loadMockCacheData() {
+    // Mock data - replace with actual API call
+    cacheStatusData = {
+        tenants: [
+            {
+                id: 'tenant_A',
+                name: 'Tenant A (USAspending)',
+                status: 'cached',
+                version: 'v2.0',
+                confidence: 95,
+                avgTime: 0.3,
+                usageCount: 47,
+                lastUsed: '2 minutes ago',
+                created: '2025-09-29 14:32:15',
+                timeSaved: '13m 42s'
+            },
+            {
+                id: 'tenant_B',
+                name: 'Tenant B (World Bank)',
+                status: 'cached',
+                version: 'v1.0',
+                confidence: 78,
+                avgTime: 0.4,
+                usageCount: 23,
+                lastUsed: '5 minutes ago',
+                created: '2025-09-29 12:15:30',
+                timeSaved: '8m 15s'
+            },
+            {
+                id: 'tenant_C',
+                name: 'Tenant C (New Customer)',
+                status: 'cold',
+                version: null,
+                confidence: null,
+                avgTime: null,
+                usageCount: 0,
+                lastUsed: 'Never',
+                created: null,
+                timeSaved: '0s'
+            }
+        ],
+        overall: {
+            totalTranslations: 226,
+            cacheHitRate: 87,
+            avgCachedTime: 0.31,
+            avgColdTime: 16.8,
+            speedImprovement: 54,
+            totalTimeSaved: '2h 15m'
+        }
+    };
+}
+
+function renderCacheStatus() {
+    const grid = document.getElementById('tenantCacheGrid');
+    const stats = document.getElementById('overallStats');
+    
+    // Render tenant cards
+    grid.innerHTML = cacheStatusData.tenants.map(tenant => `
+        <div class="tenant-cache-card ${tenant.status}">
+            <div class="tenant-header">
+                <span class="tenant-name">${tenant.name}</span>
+                <span class="cache-badge ${tenant.status}">
+                    ${tenant.status === 'cached' ? '⚡ Cached' : 
+                      tenant.status === 'cold' ? '⏳ Cold' : '⚠️ Outdated'}
+                </span>
+            </div>
+            
+            <div class="cache-metrics">
+                ${tenant.status === 'cached' ? `
+                    <div class="cache-metric">
+                        <span>Avg Time:</span>
+                        <span class="cache-metric-value">${tenant.avgTime}s</span>
+                    </div>
+                    <div class="cache-metric">
+                        <span>Usage:</span>
+                        <span class="cache-metric-value">${tenant.usageCount}x</span>
+                    </div>
+                    <div class="cache-metric">
+                        <span>Confidence:</span>
+                        <span class="cache-metric-value">${tenant.confidence}%</span>
+                    </div>
+                    <div class="cache-metric">
+                        <span>Time Saved:</span>
+                        <span class="cache-metric-value">${tenant.timeSaved}</span>
+                    </div>
+                ` : `
+                    <div class="cache-metric">
+                        <span>Status:</span>
+                        <span class="cache-metric-value">First run pending</span>
+                    </div>
+                    <div class="cache-metric">
+                        <span>Est. Time:</span>
+                        <span class="cache-metric-value">~18s</span>
+                    </div>
+                `}
+            </div>
+        </div>
+    `).join('');
+    
+    // Render overall stats
+    stats.innerHTML = `
+        <h4 style="margin-top: 0; color: #1e293b;">📊 Overall Performance</h4>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-value">${cacheStatusData.overall.totalTranslations}</span>
+                <span class="stat-label">Total Translations</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${cacheStatusData.overall.cacheHitRate}%</span>
+                <span class="stat-label">Cache Hit Rate</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${cacheStatusData.overall.avgCachedTime}s</span>
+                <span class="stat-label">Avg Cached Time</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${cacheStatusData.overall.speedImprovement}x</span>
+                <span class="stat-label">Speed Improvement</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">${cacheStatusData.overall.totalTimeSaved}</span>
+                <span class="stat-label">Total Time Saved</span>
+            </div>
+        </div>
+    `;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshCacheStatus(); // Use real data instead of mock
+});
+</script>

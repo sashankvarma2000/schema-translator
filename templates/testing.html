@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Testing Interface - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-flask"></i> Testing Interface</h1>
+        <p class="lead">Test column mappings with real tenant data</p>
+    </div>
+</div>
+
+<!-- Testing Form -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Test Column Mapping</h5>
+            </div>
+            <div class="card-body">
+                <form id="testingForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="tenant" class="form-label">Tenant</label>
+                            <select class="form-select" id="tenant" name="tenant" required>
+                                <option value="">Select Tenant</option>
+                                {% for tenant in tenants %}
+                                <option value="{{ tenant.tenant }}">{{ tenant_names.get(tenant.tenant, tenant.tenant) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="table" class="form-label">Table</label>
+                            <select class="form-select" id="table" name="table" required>
+                                <option value="">Select Table</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="column" class="form-label">Column</label>
+                            <select class="form-select" id="column" name="column" required>
+                                <option value="">Select Column</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sampleValues" class="form-label">Sample Values</label>
+                            <input type="text" class="form-control" id="sampleValues" name="sampleValues" 
+                                   placeholder="value1,value2,value3" required>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play"></i> Test Mapping
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="loadSampleData()">
+                                <i class="fas fa-download"></i> Load Sample Data
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Results -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Test Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="testResults" class="d-none">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Mapping Proposal</h6>
+                            <div id="mappingDetails"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Confidence Analysis</h6>
+                            <div id="confidenceDetails"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="noResults" class="text-center text-muted">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>No test results yet. Run a test above to see mapping results.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Test Examples -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Quick Test Examples</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Federal Contract ID</h6>
+                                <p class="card-text">Test USAspending contract identifier mapping</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadExample('tenant_A', 'awards', 'piid', 'N6871177F7668,DEAC0576RL01830')">
+                                    Load Example
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Contract Amount</h6>
+                                <p class="card-text">Test monetary value mapping</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadExample('tenant_A', 'awards', 'award_amount', '1500000,2500000')">
+                                    Load Example
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Agency Name</h6>
+                                <p class="card-text">Test organization name mapping</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadExample('tenant_A', 'agencies', 'agency_name', 'Department of Energy,Department of Defense')">
+                                    Load Example
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Tenant schema data (simplified for demo)
+const tenantSchemas = {
+    'tenant_A': {
+        'awards': ['piid', 'award_amount', 'award_type', 'recipient_id'],
+        'agencies': ['agency_name', 'agency_code', 'agency_type'],
+        'recipients': ['recipient_name', 'recipient_id', 'recipient_type']
+    },
+    'tenant_B': {
+        'projects': ['project_id', 'project_name', 'country_name', 'total_commitment_usd'],
+        'contracts': ['contract_id', 'contract_title', 'contract_value_usd']
+    },
+    'tenant_C': {
+        'releases': ['release_id', 'ocid', 'buyer_name', 'tender_status'],
+        'awards': ['award_id', 'title', 'value_amount', 'status']
+    }
+};
+
+document.getElementById('tenant').addEventListener('change', function() {
+    const tenant = this.value;
+    const tableSelect = document.getElementById('table');
+    const columnSelect = document.getElementById('column');
+    
+    // Clear existing options
+    tableSelect.innerHTML = '<option value="">Select Table</option>';
+    columnSelect.innerHTML = '<option value="">Select Column</option>';
+    
+    if (tenant && tenantSchemas[tenant]) {
+        // Add table options
+        Object.keys(tenantSchemas[tenant]).forEach(table => {
+            const option = document.createElement('option');
+            option.value = table;
+            option.textContent = table;
+            tableSelect.appendChild(option);
+        });
+    }
+});
+
+document.getElementById('table').addEventListener('change', function() {
+    const tenant = document.getElementById('tenant').value;
+    const table = this.value;
+    const columnSelect = document.getElementById('column');
+    
+    // Clear existing options
+    columnSelect.innerHTML = '<option value="">Select Column</option>';
+    
+    if (tenant && table && tenantSchemas[tenant] && tenantSchemas[tenant][table]) {
+        // Add column options
+        tenantSchemas[tenant][table].forEach(column => {
+            const option = document.createElement('option');
+            option.value = column;
+            option.textContent = column;
+            columnSelect.appendChild(option);
+        });
+    }
+});
+
+document.getElementById('testingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        tenant: formData.get('tenant'),
+        table: formData.get('table'),
+        column: formData.get('column'),
+        sample_values: formData.get('sampleValues').split(',').map(v => v.trim())
+    };
+    
+    // Show loading
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+    submitBtn.disabled = true;
+    
+    // Make API call
+    axios.post('/api/test_mapping', data)
+        .then(response => {
+            displayTestResults(response.data);
+        })
+        .catch(error => {
+            displayTestError(error.response?.data || error.message);
+        })
+        .finally(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+});
+
+function displayTestResults(data) {
+    const resultsDiv = document.getElementById('testResults');
+    const noResultsDiv = document.getElementById('noResults');
+    
+    if (data.error) {
+        displayTestError(data.error);
+        return;
+    }
+    
+    const mapping = data.mapping_proposal || {};
+    const confidence = mapping.confidence || 0;
+    
+    // Show results
+    resultsDiv.classList.remove('d-none');
+    noResultsDiv.classList.add('d-none');
+    
+    // Mapping details
+    document.getElementById('mappingDetails').innerHTML = `
+        <div class="mapping-card ${getMappingClass(confidence)}">
+            <div class="card-body">
+                <h6>Canonical Field: <strong>${mapping.canonical_field || 'Unknown'}</strong></h6>
+                <p class="mb-1"><strong>Confidence:</strong> <span class="confidence-${getConfidenceClass(confidence)}">${(confidence * 100).toFixed(1)}%</span></p>
+                <p class="mb-1"><strong>Transformation:</strong> ${mapping.transformation || 'direct'}</p>
+                <p class="mb-0"><strong>Reasoning:</strong> ${mapping.reasoning || 'No reasoning provided'}</p>
+            </div>
+        </div>
+    `;
+    
+    // Confidence details
+    document.getElementById('confidenceDetails').innerHTML = `
+        <div class="card">
+            <div class="card-body">
+                <h6>Status: ${getStatusText(confidence)}</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-${getConfidenceColor(confidence)}" style="width: ${confidence * 100}%"></div>
+                </div>
+                <small class="text-muted">
+                    ${confidence >= 0.8 ? 'Auto-accept: High confidence mapping' : 
+                      confidence >= 0.5 ? 'HITL Review: Medium confidence, needs human review' : 
+                      'Reject: Low confidence, not recommended'}
+                </small>
+            </div>
+        </div>
+    `;
+}
+
+function displayTestError(error) {
+    const resultsDiv = document.getElementById('testResults');
+    const noResultsDiv = document.getElementById('noResults');
+    
+    resultsDiv.classList.remove('d-none');
+    noResultsDiv.classList.add('d-none');
+    
+    document.getElementById('mappingDetails').innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> ${error}
+        </div>
+    `;
+    
+    document.getElementById('confidenceDetails').innerHTML = `
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i> Unable to test mapping due to API error.
+        </div>
+    `;
+}
+
+function loadExample(tenant, table, column, sampleValues) {
+    document.getElementById('tenant').value = tenant;
+    document.getElementById('tenant').dispatchEvent(new Event('change'));
+    
+    setTimeout(() => {
+        document.getElementById('table').value = table;
+        document.getElementById('table').dispatchEvent(new Event('change'));
+        
+        setTimeout(() => {
+            document.getElementById('column').value = column;
+            document.getElementById('sampleValues').value = sampleValues;
+        }, 100);
+    }, 100);
+}
+
+function loadSampleData() {
+    const tenant = document.getElementById('tenant').value;
+    const table = document.getElementById('table').value;
+    const column = document.getElementById('column').value;
+    
+    if (!tenant || !table || !column) {
+        alert('Please select tenant, table, and column first');
+        return;
+    }
+    
+    // In a real implementation, this would load actual sample data
+    document.getElementById('sampleValues').value = 'sample1,sample2,sample3';
+}
+
+function getMappingClass(confidence) {
+    if (confidence >= 0.8) return 'mapping-auto-accept';
+    if (confidence >= 0.5) return 'mapping-hitl-review';
+    return 'mapping-reject';
+}
+
+function getConfidenceClass(confidence) {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.5) return 'medium';
+    return 'low';
+}
+
+function getConfidenceColor(confidence) {
+    if (confidence >= 0.8) return 'success';
+    if (confidence >= 0.5) return 'warning';
+    return 'danger';
+}
+
+function getStatusText(confidence) {
+    if (confidence >= 0.8) return 'Auto-Accept';
+    if (confidence >= 0.5) return 'HITL Review';
+    return 'Reject';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Schema Analysis - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-database"></i> Comprehensive Schema Analysis</h1>
+                <div>
+                    <select id="tenantSelect" class="form-select" style="width: 300px;">
+                        <option value="">Select a tenant to analyze...</option>
+                        {% for tenant_id, tenant_name in tenant_names.items() %}
+                        <option value="{{ tenant_id }}">{{ tenant_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Analyzing schema...</p>
+    </div>
+
+    <!-- Analysis Results -->
+    <div id="analysisResults" style="display: none;">
+        <!-- Tenant Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-building"></i> <span id="tenantName"></span> - Schema Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="totalTables">-</div>
+                                    <div>Total Tables</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="totalColumns">-</div>
+                                    <div>Total Columns</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="mappingSuccessRate">-</div>
+                                    <div>Mapping Success Rate</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="hitlRequired">-</div>
+                                    <div>HITL Required</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schema Variations -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Schema Variations & Issues</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="schemaVariations">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Analysis -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-table"></i> Detailed Table Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="tablesAnalysis">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorMessage"></span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tenantSelect = document.getElementById('tenantSelect');
+    const loadingState = document.getElementById('loadingState');
+    const analysisResults = document.getElementById('analysisResults');
+    const errorState = document.getElementById('errorState');
+
+    tenantSelect.addEventListener('change', function() {
+        const selectedTenant = this.value;
+        if (selectedTenant) {
+            loadSchemaAnalysis(selectedTenant);
+        } else {
+            analysisResults.style.display = 'none';
+            errorState.style.display = 'none';
+        }
+    });
+
+    async function loadSchemaAnalysis(tenant) {
+        loadingState.style.display = 'block';
+        analysisResults.style.display = 'none';
+        errorState.style.display = 'none';
+
+        try {
+            const response = await fetch(`/api/schema-analysis/${tenant}`);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            displayAnalysisResults(data);
+            loadingState.style.display = 'none';
+            analysisResults.style.display = 'block';
+        } catch (error) {
+            console.error('Error loading schema analysis:', error);
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            document.getElementById('errorMessage').textContent = error.message;
+        }
+    }
+
+    function displayAnalysisResults(data) {
+        // Update tenant name
+        document.getElementById('tenantName').textContent = data.tenant_name;
+
+        // Update overview metrics
+        document.getElementById('totalTables').textContent = Object.keys(data.tables).length;
+        document.getElementById('totalColumns').textContent = data.mapping_summary.total_columns;
+        document.getElementById('mappingSuccessRate').textContent = 
+            (data.mapping_summary.mapping_success_rate * 100).toFixed(1) + '%';
+        document.getElementById('hitlRequired').textContent = data.mapping_summary.requires_hitl;
+
+        // Display schema variations
+        displaySchemaVariations(data.schema_variations);
+
+        // Display tables analysis
+        displayTablesAnalysis(data.tables);
+    }
+
+    function displaySchemaVariations(variations) {
+        const container = document.getElementById('schemaVariations');
+        container.innerHTML = '';
+
+        if (variations.table_structure.length === 0 && 
+            variations.semantic_differences.length === 0 && 
+            variations.data_type_variations.length === 0 && 
+            variations.naming_conventions.length === 0) {
+            container.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> No significant schema variations detected.</div>';
+            return;
+        }
+
+        let html = '';
+        
+        if (variations.table_structure.length > 0) {
+            html += '<div class="alert alert-warning"><h6><i class="fas fa-table"></i> Table Structure Variations</h6><ul>';
+            variations.table_structure.forEach(variation => {
+                html += `<li>${variation}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        if (variations.semantic_differences.length > 0) {
+            html += '<div class="alert alert-danger"><h6><i class="fas fa-exclamation-triangle"></i> Semantic Differences</h6><ul>';
+            variations.semantic_differences.forEach(diff => {
+                html += `<li>${diff}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        if (variations.data_type_variations.length > 0) {
+            html += '<div class="alert alert-info"><h6><i class="fas fa-code"></i> Data Type Variations</h6><ul>';
+            variations.data_type_variations.forEach(variation => {
+                html += `<li>${variation}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        if (variations.naming_conventions.length > 0) {
+            html += '<div class="alert alert-secondary"><h6><i class="fas fa-tag"></i> Naming Convention Issues</h6><ul>';
+            variations.naming_conventions.forEach(convention => {
+                html += `<li>${convention}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    function displayTablesAnalysis(tables) {
+        const container = document.getElementById('tablesAnalysis');
+        let html = '';
+
+        Object.entries(tables).forEach(([tableName, tableData]) => {
+            html += `
+                <div class="table-analysis mb-4">
+                    <h6><i class="fas fa-table"></i> ${tableName}</h6>
+                    <p class="text-muted">${tableData.description}</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <span class="badge bg-primary">${tableData.semantic_analysis.table_type}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-${tableData.semantic_analysis.mapping_complexity === 'High' ? 'danger' : 'success'}">
+                                ${tableData.semantic_analysis.mapping_complexity} Complexity
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Primary Key:</strong> ${tableData.primary_key.join(', ') || 'None'}
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Semantic Type</th>
+                                    <th>Canonical Field</th>
+                                    <th>Confidence</th>
+                                    <th>Reasoning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            tableData.columns.forEach(column => {
+                const confidenceClass = column.confidence >= 0.8 ? 'success' : 
+                                      column.confidence >= 0.6 ? 'warning' : 'danger';
+                
+                html += `
+                    <tr>
+                        <td><code>${column.name}</code></td>
+                        <td><span class="badge bg-secondary">${column.type}</span></td>
+                        <td><span class="badge bg-info">${column.semantic_type}</span></td>
+                        <td><code>${column.canonical_field}</code></td>
+                        <td>
+                            <span class="badge bg-${confidenceClass}">
+                                ${(column.confidence * 100).toFixed(0)}%
+                            </span>
+                        </td>
+                        <td><small>${column.mapping_reasoning}</small></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+
+                    ${tableData.semantic_analysis.key_patterns.length > 0 ? `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-lightbulb"></i> Key Patterns</h6>
+                            <ul class="mb-0">
+                                ${tableData.semantic_analysis.key_patterns.map(pattern => `<li>${pattern}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${tableData.semantic_analysis.semantic_issues.length > 0 ? `
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Semantic Issues</h6>
+                            <ul class="mb-0">
+                                ${tableData.semantic_analysis.semantic_issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}

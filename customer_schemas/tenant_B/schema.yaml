@@ -1,0 +1,199 @@
+tenant: tenant_B
+description: "World Bank Project Procurement - Real project-to-contract relationships with procurement lifecycle"
+
+tables:
+  projects:
+    description: "World Bank development projects with procurement components"
+    columns:
+      project_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "World Bank project identifier (primary key)"
+      
+      project_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Official World Bank project name"
+      
+      borrower_country:
+        type: "varchar(200)"
+        nullable: true
+        description: "Borrower country name"
+      
+      region:
+        type: "varchar(100)"
+        nullable: true
+        description: "World Bank regional classification"
+      
+      sector:
+        type: "varchar(50)"
+        nullable: true
+        description: "World Bank sector code"
+      
+      total_commitment_usd:
+        type: "decimal(15,2)"
+        nullable: true
+        description: "Total project commitment in USD"
+      
+      approval_date:
+        type: "varchar(20)"
+        nullable: true
+        description: "Board approval date"
+      
+      status:
+        type: "varchar(50)"
+        nullable: true
+        description: "Current project status"
+      
+      lending_instrument:
+        type: "varchar(100)"
+        nullable: true
+        description: "World Bank lending instrument type"
+
+  procurement_stages:
+    description: "Procurement lifecycle stages for each project"
+    columns:
+      stage_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Procurement stage identifier (primary key)"
+      
+      project_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Foreign key to projects table"
+      
+      stage_name:
+        type: "varchar(50)"
+        nullable: true
+        description: "Procurement stage name (Planning, Bidding, etc.)"
+      
+      stage_order:
+        type: "int"
+        nullable: true
+        description: "Sequential order of stage in process"
+      
+      stage_date:
+        type: "date"
+        nullable: true
+        description: "Date of procurement stage"
+      
+      stage_status:
+        type: "varchar(50)"
+        nullable: true
+        description: "Status of procurement stage"
+      
+      procurement_method:
+        type: "varchar(100)"
+        nullable: true
+        description: "Procurement method used"
+      
+      estimated_value_usd:
+        type: "decimal(15,2)"
+        nullable: true
+        description: "Estimated value for this stage"
+
+  contracts:
+    description: "Project contracts linked to procurement stages"
+    columns:
+      contract_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Contract identifier (primary key)"
+      
+      project_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Foreign key to projects table"
+      
+      contract_title:
+        type: "varchar(500)"
+        nullable: true
+        description: "Contract title"
+      
+      supplier_id:
+        type: "varchar(20)"
+        nullable: true
+        description: "Foreign key to suppliers table"
+      
+      contract_value_usd:
+        type: "decimal(15,2)"
+        nullable: true
+        description: "Contract value in USD"
+      
+      contract_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of contract (Works, Goods, Services, etc.)"
+      
+      signing_date:
+        type: "date"
+        nullable: true
+        description: "Contract signing date"
+      
+      completion_date:
+        type: "date"
+        nullable: true
+        description: "Expected completion date"
+      
+      contract_status:
+        type: "varchar(50)"
+        nullable: true
+        description: "Current contract status"
+      
+      procurement_method:
+        type: "varchar(50)"
+        nullable: true
+        description: "Procurement method code"
+
+  suppliers:
+    description: "Supplier/contractor reference data for project contracts"
+    columns:
+      supplier_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Supplier identifier (primary key)"
+      
+      supplier_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Supplier company name"
+      
+      supplier_country:
+        type: "varchar(200)"
+        nullable: true
+        description: "Supplier country"
+      
+      supplier_type:
+        type: "varchar(100)"
+        nullable: true
+        description: "Type of supplier organization"
+      
+      registration_date:
+        type: "date"
+        nullable: true
+        description: "Supplier registration date"
+      
+      active_status:
+        type: "varchar(20)"
+        nullable: true
+        description: "Supplier active status"
+
+relationships:
+  - from_table: "procurement_stages"
+    from_column: "project_id"
+    to_table: "projects"
+    to_column: "project_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "contracts"
+    from_column: "project_id"
+    to_table: "projects"
+    to_column: "project_id"
+    relationship_type: "many_to_one"
+  
+  - from_table: "contracts"
+    from_column: "supplier_id"
+    to_table: "suppliers"
+    to_column: "supplier_id"
+    relationship_type: "many_to_one"

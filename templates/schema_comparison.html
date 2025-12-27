@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Schema Comparison - Schema Translator{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-balance-scale"></i> Cross-Tenant Schema Comparison</h1>
+                <div>
+                    <button id="refreshComparison" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Analyzing schemas across tenants...</p>
+    </div>
+
+    <!-- Comparison Results -->
+    <div id="comparisonResults" style="display: none;">
+        <!-- Overview Metrics -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar"></i> Cross-Tenant Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Tenant</th>
+                                        <th>Tables</th>
+                                        <th>Columns</th>
+                                        <th>Mapping Success</th>
+                                        <th>HITL Required</th>
+                                        <th>Complexity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overviewTable">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schema Variations Analysis -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Schema Variations Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="variationsAnalysis">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Semantic Differences -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-brain"></i> Semantic Differences Detection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="semanticAnalysis">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapping Challenges -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-puzzle-piece"></i> Mapping Challenges & Solutions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="mappingChallenges">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="alert alert-danger" style="display: none;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorMessage"></span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingState = document.getElementById('loadingState');
+    const comparisonResults = document.getElementById('comparisonResults');
+    const errorState = document.getElementById('errorState');
+    const refreshButton = document.getElementById('refreshComparison');
+
+    refreshButton.addEventListener('click', loadComparison);
+
+    // Load comparison on page load
+    loadComparison();
+
+    async function loadComparison() {
+        loadingState.style.display = 'block';
+        comparisonResults.style.display = 'none';
+        errorState.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/schema-comparison');
+            const data = await response.json();
+
+            displayComparisonResults(data);
+            loadingState.style.display = 'none';
+            comparisonResults.style.display = 'block';
+        } catch (error) {
+            console.error('Error loading schema comparison:', error);
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            document.getElementById('errorMessage').textContent = error.message;
+        }
+    }
+
+    function displayComparisonResults(data) {
+        displayOverviewTable(data);
+        displayVariationsAnalysis(data);
+        displaySemanticAnalysis(data);
+        displayMappingChallenges(data);
+    }
+
+    function displayOverviewTable(data) {
+        const tbody = document.getElementById('overviewTable');
+        let html = '';
+
+        Object.entries(data).forEach(([tenantId, tenantData]) => {
+            const successRate = (tenantData.mapping_summary.mapping_success_rate * 100).toFixed(1);
+            const complexity = tenantData.mapping_summary.requires_hitl > 5 ? 'High' : 
+                             tenantData.mapping_summary.requires_hitl > 2 ? 'Medium' : 'Low';
+            const complexityClass = complexity === 'High' ? 'danger' : 
+                                  complexity === 'Medium' ? 'warning' : 'success';
+
+            html += `
+                <tr>
+                    <td><strong>${tenantData.tenant_name}</strong></td>
+                    <td><span class="badge bg-primary">${tenantData.table_count}</span></td>
+                    <td><span class="badge bg-info">${tenantData.total_columns}</span></td>
+                    <td><span class="badge bg-success">${successRate}%</span></td>
+                    <td><span class="badge bg-warning">${tenantData.mapping_summary.requires_hitl}</span></td>
+                    <td><span class="badge bg-${complexityClass}">${complexity}</span></td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    function displayVariationsAnalysis(data) {
+        const container = document.getElementById('variationsAnalysis');
+        
+        // Analyze variations across tenants
+        const allVariations = {
+            table_structure: [],
+            semantic_differences: [],
+            data_type_variations: [],
+            naming_conventions: []
+        };
+
+        Object.values(data).forEach(tenantData => {
+            const variations = tenantData.schema_variations;
+            Object.keys(allVariations).forEach(key => {
+                if (variations[key]) {
+                    allVariations[key].push(...variations[key]);
+                }
+            });
+        });
+
+        let html = '';
+
+        if (allVariations.table_structure.length > 0) {
+            html += '<div class="alert alert-warning"><h6><i class="fas fa-table"></i> Table Structure Variations</h6><ul>';
+            [...new Set(allVariations.table_structure)].forEach(variation => {
+                html += `<li>${variation}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        if (allVariations.semantic_differences.length > 0) {
+            html += '<div class="alert alert-danger"><h6><i class="fas fa-exclamation-triangle"></i> Semantic Differences</h6><ul>';
+            [...new Set(allVariations.semantic_differences)].forEach(diff => {
+                html += `<li>${diff}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        if (html === '') {
+            html = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> No significant variations detected across tenants.</div>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    function displaySemanticAnalysis(data) {
+        const container = document.getElementById('semanticAnalysis');
+        
+        // Analyze semantic patterns
+        const semanticPatterns = {
+            'ARR vs LTV': [],
+            'Date Format Variations': [],
+            'Status Field Variations': [],
+            'ID Field Patterns': []
+        };
+
+        Object.entries(data).forEach(([tenantId, tenantData]) => {
+            // This would be enhanced with actual semantic analysis
+            // For now, we'll show a summary
+        });
+
+        let html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-dollar-sign"></i> Financial Semantics</h6>
+                    <div class="alert alert-info">
+                        <strong>ARR vs LTV Detection:</strong><br>
+                        • Tenant A: Uses 'total_obligation' (LTV semantics)<br>
+                        • Tenant B: Uses 'annual_value' (ARR semantics)<br>
+                        • <strong>Challenge:</strong> Different financial interpretations
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-calendar"></i> Date Format Variations</h6>
+                    <div class="alert alert-warning">
+                        <strong>Date Field Patterns:</strong><br>
+                        • Tenant A: 'award_date' (YYYY-MM-DD)<br>
+                        • Tenant C: 'expiry_days_remaining' (integer)<br>
+                        • <strong>Challenge:</strong> Implicit vs explicit date handling
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-tag"></i> Status Field Variations</h6>
+                    <div class="alert alert-secondary">
+                        <strong>Status Patterns:</strong><br>
+                        • Multiple status tables vs single status field<br>
+                        • Different status value encodings<br>
+                        • <strong>Challenge:</strong> Status normalization
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-key"></i> ID Field Patterns</h6>
+                    <div class="alert alert-primary">
+                        <strong>Identifier Patterns:</strong><br>
+                        • Single vs composite primary keys<br>
+                        • Different ID naming conventions<br>
+                        • <strong>Challenge:</strong> ID mapping and joins
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function displayMappingChallenges(data) {
+        const container = document.getElementById('mappingChallenges');
+        
+        let html = `
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h6><i class="fas fa-exclamation-triangle"></i> High Priority Challenges</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Semantic Ambiguity:</strong> ARR vs LTV in financial fields</li>
+                                <li><strong>Date Handling:</strong> Implicit vs explicit date formats</li>
+                                <li><strong>Table Structure:</strong> Single vs multi-table approaches</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h6><i class="fas fa-tools"></i> Recommended Solutions</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>LLM Semantic Analysis:</strong> Context-aware field interpretation</li>
+                                <li><strong>HITL Workflow:</strong> Human review for ambiguous mappings</li>
+                                <li><strong>Data Profiling:</strong> Sample data analysis for validation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6><i class="fas fa-lightbulb"></i> Implementation Strategy</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li><strong>Confidence Thresholds:</strong> Auto-accept >80%, HITL 60-80%</li>
+                                <li><strong>Transform Rules:</strong> Deterministic data standardization</li>
+                                <li><strong>Monitoring:</strong> Continuous mapping quality assessment</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+tenant: tenant_E
+description: "FPDS (Federal Procurement Data System) - Real US contract actions and modifications"
+
+tables:
+  contracts_header:
+    description: "Contract header snapshots with PIID/agency/recipient information"
+    columns:
+      contract_header_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal contract header identifier (primary key)"
+      
+      piid:
+        type: "varchar(50)"
+        nullable: true
+        description: "Procurement Instrument Identifier (PIID)"
+      
+      generated_unique_award_id:
+        type: "varchar(200)"
+        nullable: true
+        description: "USAspending generated unique award identifier"
+      
+      awarding_agency_code:
+        type: "varchar(10)"
+        nullable: true
+        description: "Awarding agency code"
+      
+      awarding_agency_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Awarding agency name"
+      
+      recipient_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Contractor/recipient name"
+      
+      recipient_uei:
+        type: "varchar(20)"
+        nullable: true
+        description: "Recipient UEI identifier"
+      
+      recipient_duns:
+        type: "varchar(20)"
+        nullable: true
+        description: "Recipient DUNS number"
+      
+      contract_award_type:
+        type: "varchar(100)"
+        nullable: true
+        description: "Type of contract award"
+      
+      base_obligation_date:
+        type: "date"
+        nullable: true
+        description: "Initial obligation date"
+      
+      period_of_performance_start:
+        type: "date"
+        nullable: true
+        description: "Performance period start date"
+      
+      period_of_performance_end:
+        type: "date"
+        nullable: true
+        description: "Performance period end date"
+      
+      last_modified_date:
+        type: "date"
+        nullable: true
+        description: "Last modification date"
+
+  contract_actions:
+    description: "Contract actions and modifications - compute current value and PoP end from latest mod"
+    columns:
+      action_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Contract action identifier (primary key)"
+      
+      piid:
+        type: "varchar(50)"
+        nullable: false
+        description: "Foreign key to contracts_header via PIID"
+      
+      modification_number:
+        type: "varchar(10)"
+        nullable: true
+        description: "Modification sequence number (0 = initial)"
+      
+      action_date:
+        type: "date"
+        nullable: true
+        description: "Date of this contract action"
+      
+      action_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of action (Initial Award, Modification, etc.)"
+      
+      federal_action_obligation:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Federal action obligation amount"
+      
+      current_total_value:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Cumulative total value after this action"
+      
+      period_of_performance_start:
+        type: "date"
+        nullable: true
+        description: "PoP start (may change with modifications)"
+      
+      period_of_performance_end:
+        type: "date"
+        nullable: true
+        description: "PoP end (may change with modifications)"
+      
+      awarding_agency_code:
+        type: "varchar(10)"
+        nullable: true
+        description: "Awarding agency code"
+      
+      funding_agency_code:
+        type: "varchar(10)"
+        nullable: true
+        description: "Funding agency code"
+      
+      action_obligation:
+        type: "decimal(18,2)"
+        nullable: true
+        description: "Obligation amount for this specific action"
+
+  vendors:
+    description: "Vendor reference data with DUNS/UEI mapping"
+    columns:
+      vendor_id:
+        type: "varchar(20)"
+        nullable: false
+        description: "Internal vendor identifier (primary key)"
+      
+      legal_business_name:
+        type: "varchar(500)"
+        nullable: true
+        description: "Legal business name"
+      
+      uei:
+        type: "varchar(20)"
+        nullable: true
+        description: "Unique Entity Identifier (UEI)"
+      
+      duns_number:
+        type: "varchar(20)"
+        nullable: true
+        description: "DUNS number"
+      
+      vendor_status:
+        type: "varchar(20)"
+        nullable: true
+        description: "Vendor registration status"
+      
+      registration_date:
+        type: "date"
+        nullable: true
+        description: "Vendor registration date"
+      
+      business_type:
+        type: "varchar(50)"
+        nullable: true
+        description: "Type of business entity"
+
+relationships:
+  - from_table: "contract_actions"
+    from_column: "piid"
+    to_table: "contracts_header"
+    to_column: "piid"
+    relationship_type: "many_to_one"
+  
+  - from_table: "contracts_header"
+    from_column: "recipient_uei"
+    to_table: "vendors"
+    to_column: "uei"
+    relationship_type: "many_to_one"

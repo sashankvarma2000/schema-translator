@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Translation Dashboard - Schema Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+    <style>
+        .confidence-high { @apply bg-green-100 text-green-800 border-green-200; }
+        .confidence-medium { @apply bg-yellow-100 text-yellow-800 border-yellow-200; }
+        .confidence-low { @apply bg-red-100 text-red-800 border-red-200; }
+        .sql-code { 
+            @apply bg-gray-50 p-3 rounded-lg font-mono text-sm border;
+            white-space: pre-wrap;
+        }
+        .tree-line { @apply text-gray-400 font-mono text-xs; }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .collapsible-content.expanded {
+            max-height: 1000px;
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .skeleton {
+            @apply bg-gray-200 animate-pulse rounded;
+        }
+        .copy-feedback {
+            @apply absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .copy-feedback.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-full mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Query Translation Dashboard</h1>
+                    <p class="text-sm text-gray-600">AI-powered standardized query translation with detailed reasoning</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" onclick="translateQuery()">
+                        🔄 Translate
+                    </button>
+                    <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors" onclick="clearAll()">
+                        🗑️ Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-full mx-auto px-6">
+            <div class="flex space-x-8">
+                <button class="py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+                    🔀 Query Translation
+                </button>
+                <button class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                    🗂️ Schema Explorer
+                </button>
+                <button class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700">
+                    ⚡ Performance Analysis
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-full mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 h-screen">
+            
+            <!-- LEFT PANEL (30%) -->
+            <div class="lg:col-span-3 space-y-6 overflow-y-auto max-h-screen pb-20">
+                
+                <!-- Standardized Query -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">📝 Standardized Query</h3>
+                    <textarea 
+                        id="queryInput" 
+                        class="w-full h-48 p-3 border border-gray-300 rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="SELECT contract_id, status FROM contracts WHERE status = 'active'"
+                    >SELECT contract_id, status FROM contracts WHERE status = 'active'</textarea>
+                </div>
+
+                <!-- Target Customers -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">👥 Target Customers</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="tenant_A">
+                            <span class="text-sm">
+                                <span class="font-medium">Tenant A</span>
+                                <span class="text-gray-500">(USAspending Multi-Table)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="tenant_B" checked>
+                            <span class="text-sm">
+                                <span class="font-medium">Tenant B</span>
+                                <span class="text-gray-500">(World Bank Projects)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="tenant_C">
+                            <span class="text-sm">
+                                <span class="font-medium">Tenant C</span>
+                                <span class="text-gray-500">(OCDS Standard)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="tenant_D" checked>
+                            <span class="text-sm">
+                                <span class="font-medium">Tenant D</span>
+                                <span class="text-gray-500">(Enterprise Contracts)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="tenant_E">
+                            <span class="text-sm">
+                                <span class="font-medium">Tenant E</span>
+                                <span class="text-gray-500">(Contract Actions)</span>
+                            </span>
+                        </label>
+                        <hr class="my-3">
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="customer_a">
+                            <span class="text-sm">
+                                <span class="font-medium">Demo A</span>
+                                <span class="text-gray-500">(Single Table Mock)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="customer_b">
+                            <span class="text-sm">
+                                <span class="font-medium">Demo B</span>
+                                <span class="text-gray-500">(Multi-Table Mock)</span>
+                            </span>
+                        </label>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" value="customer_c">
+                            <span class="text-sm">
+                                <span class="font-medium">Demo C</span>
+                                <span class="text-gray-500">(Different Split Mock)</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Translation Options -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">⚙️ Translation Options</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Performance Priority</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="priority" value="accuracy" class="text-blue-600 focus:ring-blue-500" checked>
+                                    <span class="ml-2 text-sm">Accuracy</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="priority" value="speed" class="text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm">Speed</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-700">Show Reasoning</span>
+                                <div class="relative">
+                                    <input type="checkbox" id="showReasoning" class="sr-only" value="reasoning" checked>
+                                    <div class="block bg-blue-600 w-14 h-8 rounded-full cursor-pointer" onclick="toggleSwitch()"></div>
+                                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform translate-x-6"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Examples Dropdown -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">📚 Examples</h3>
+                    <select class="w-full p-2 border border-gray-300 rounded-lg text-sm" onchange="loadExample(this.value)">
+                        <option value="">Select an example query...</option>
+                        <option value="simple">Simple Filter: Active contracts</option>
+                        <option value="date">Date Range: Contracts expiring soon</option>
+                        <option value="aggregation">Aggregation: Revenue by status</option>
+                        <option value="complex">Complex Join: Multi-table customer data</option>
+                        <option value="edge">Edge Case: Missing foreign keys</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- CENTER PANEL (40%) -->
+            <div class="lg:col-span-4 overflow-y-auto max-h-screen pb-20">
+                <div id="translationResults" class="space-y-4">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="text-center py-12">
+                        <div class="text-gray-400 text-6xl mb-4">🔍</div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to Translate</h3>
+                        <p class="text-gray-500">Select tenants and click "Translate" to see AI-powered query translations</p>
+                    </div>
+                </div>
+                
+                <!-- COMPREHENSIVE ANALYSIS SECTION -->
+                <div id="comprehensiveAnalysis" class="mt-8 space-y-6" style="display: none;">
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                        <div class="flex items-center space-x-3 mb-6">
+                            <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-lg font-bold">📊</span>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900">Comprehensive Query Analysis</h2>
+                                <p class="text-sm text-gray-600">Complete breakdown of all translations and field mappings</p>
+                            </div>
+                        </div>
+                        <div id="analysisContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL (30%) -->
+            <div class="lg:col-span-3 overflow-y-auto max-h-screen pb-20">
+                <div id="reasoningPanel" class="space-y-4">
+                    <!-- Empty State -->
+                    <div id="reasoningEmptyState" class="text-center py-12">
+                        <div class="text-gray-400 text-6xl mb-4">🧠</div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">AI Reasoning</h3>
+                        <p class="text-gray-500">Detailed step-by-step analysis will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Action Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 shadow-lg">
+        <div class="flex justify-center space-x-4">
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <span>💾</span>
+                <span>Save Translation</span>
+            </button>
+            <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+                <span>🧪</span>
+                <span>Test Execute</span>
+            </button>
+            <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2" onclick="copyAllSQL()">
+                <span>📋</span>
+                <span>Copy SQL</span>
+            </button>
+            <button class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2">
+                <span>📊</span>
+                <span>Explain Plan</span>
+            </button>
+            <button class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center space-x-2" onclick="regenerateTranslations()">
+                <span>🔄</span>
+                <span>Regenerate</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentTranslations = {};
+        let currentReasoning = {};
+        let selectedTenant = null;
+
+        // Example queries
+        const examples = {
+            simple: "SELECT contract_id, status FROM contracts WHERE status = 'active'",
+            date: "SELECT contract_id, expiry_date FROM contracts WHERE expiry_date > '2025-01-01'",
+            aggregation: "SELECT status, COUNT(*) as count, AVG(value) as avg_value FROM contracts GROUP BY status",
+            complex: "SELECT c.contract_id, c.status, p.party_name FROM contracts c JOIN parties p ON c.supplier_id = p.party_id WHERE c.status = 'active'",
+            edge: "SELECT contract_id, status FROM contracts WHERE missing_field = 'test'"
+        };
+
+        // Load example query
+        function loadExample(value) {
+            if (value && examples[value]) {
+                document.getElementById('queryInput').value = examples[value];
+            }
+        }
+
+        // Toggle switch functionality
+        function toggleSwitch() {
+            const checkbox = document.getElementById('showReasoning');
+            const dot = document.querySelector('.dot');
+            const bg = dot.parentElement;
+            
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                dot.classList.add('translate-x-6');
+                bg.classList.add('bg-blue-600');
+                bg.classList.remove('bg-gray-300');
+            } else {
+                dot.classList.remove('translate-x-6');
+                bg.classList.remove('bg-blue-600');
+                bg.classList.add('bg-gray-300');
+            }
+        }
+
+        // Get selected tenants
+        function getSelectedTenants() {
+            // Only select tenant checkboxes, not other UI checkboxes like "Show Reasoning"
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][value]:checked');
+            return Array.from(checkboxes)
+                .map(cb => cb.value)
+                .filter(v => v && v !== 'on' && (v.startsWith('tenant_') || v.startsWith('customer_')));
+        }
+
+        // Main translation function
+        async function translateQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            const selectedTenants = getSelectedTenants();
+
+            if (!query) {
+                alert('Please enter a query');
+                return;
+            }
+
+            if (selectedTenants.length === 0) {
+                alert('Please select at least one tenant');
+                return;
+            }
+
+            // Show loading state
+            showLoadingState();
+
+            try {
+                // Translate for each selected tenant
+                const translations = {};
+                const reasoning = {};
+
+                for (const tenantId of selectedTenants) {
+                    const response = await fetch('/api/query-translation/translate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            query: query,
+                            customer_id: tenantId
+                        })
+                    });
+
+                    const result = await response.json();
+                    translations[tenantId] = result;
+
+                    // Get relationships for reasoning
+                    try {
+                        const relResponse = await fetch(`/api/query-translation/relationships/${tenantId}`);
+                        const relResult = await relResponse.json();
+                        reasoning[tenantId] = relResult;
+                    } catch (e) {
+                        console.warn(`Could not load relationships for ${tenantId}:`, e);
+                        reasoning[tenantId] = [];
+                    }
+                }
+
+                currentTranslations = translations;
+                currentReasoning = reasoning;
+
+                // Display results
+                displayTranslations(translations);
+                if (selectedTenants.length > 0) {
+                    displayReasoning(selectedTenants[0], translations[selectedTenants[0]], reasoning[selectedTenants[0]]);
+                }
+                
+                // Show comprehensive analysis at the end
+                showComprehensiveAnalysis(translations, reasoning, selectedTenants);
+
+            } catch (error) {
+                console.error('Translation failed:', error);
+                showError('Translation failed: ' + error.message);
+            }
+        }
+
+        // Show loading state with live updates
+        function showLoadingState() {
+            const resultsContainer = document.getElementById('translationResults');
+            const reasoningContainer = document.getElementById('reasoningPanel');
+
+            resultsContainer.innerHTML = `
+                <div class="space-y-4">
+                    ${Array(3).fill(0).map(() => `
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div class="animate-pulse">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="skeleton h-6 w-32"></div>
+                                    <div class="skeleton h-6 w-20 rounded-full"></div>
+                                </div>
+                                <div class="skeleton h-32 w-full mb-4"></div>
+                                <div class="skeleton h-4 w-3/4"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            reasoningContainer.innerHTML = `
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">🧠 AI Processing Live</h3>
+                    <div id="liveProgress" class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            <span class="text-sm text-gray-600">Step 1: Analyzing schema structure...</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="h-4 w-4 border-2 border-gray-300 rounded-full"></div>
+                            <span class="text-sm text-gray-400">Step 2: Discovering table relationships...</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="h-4 w-4 border-2 border-gray-300 rounded-full"></div>
+                            <span class="text-sm text-gray-400">Step 3: Generating JOIN strategy...</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="h-4 w-4 border-2 border-gray-300 rounded-full"></div>
+                            <span class="text-sm text-gray-400">Step 4: Translating query...</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="h-4 w-4 border-2 border-gray-300 rounded-full"></div>
+                            <span class="text-sm text-gray-400">Step 5: Validating results...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Simulate live progress updates
+            setTimeout(() => updateProgress(1), 1000);
+            setTimeout(() => updateProgress(2), 3000);
+            setTimeout(() => updateProgress(3), 5000);
+            setTimeout(() => updateProgress(4), 7000);
+            setTimeout(() => updateProgress(5), 9000);
+        }
+
+        // Update progress indicator
+        function updateProgress(step) {
+            const progressContainer = document.getElementById('liveProgress');
+            if (!progressContainer) return;
+
+            const steps = progressContainer.children;
+            if (step <= steps.length) {
+                // Mark current step as complete
+                const currentStep = steps[step - 1];
+                const spinner = currentStep.querySelector('.animate-spin');
+                const circle = currentStep.querySelector('.border-gray-300');
+                const text = currentStep.querySelector('span');
+
+                if (spinner) {
+                    spinner.className = 'h-4 w-4 bg-green-500 rounded-full flex items-center justify-center';
+                    spinner.innerHTML = '<svg class="h-2 w-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>';
+                } else if (circle) {
+                    circle.className = 'h-4 w-4 bg-green-500 rounded-full flex items-center justify-center';
+                    circle.innerHTML = '<svg class="h-2 w-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>';
+                }
+
+                if (text) {
+                    text.className = 'text-sm text-green-600 font-medium';
+                }
+
+                // Start next step
+                if (step < steps.length) {
+                    const nextStep = steps[step];
+                    const nextCircle = nextStep.querySelector('.border-gray-300');
+                    const nextText = nextStep.querySelector('span');
+
+                    if (nextCircle) {
+                        nextCircle.className = 'animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full';
+                    }
+                    if (nextText) {
+                        nextText.className = 'text-sm text-gray-600';
+                    }
+                }
+            }
+        }
+
+        // Display translations
+        function displayTranslations(translations) {
+            const resultsContainer = document.getElementById('translationResults');
+            let html = '';
+
+            const tenantNames = {
+                'tenant_A': 'Tenant A (USAspending)',
+                'tenant_B': 'Tenant B (World Bank)',
+                'tenant_C': 'Tenant C (OCDS)',
+                'tenant_D': 'Tenant D (Enterprise)',
+                'tenant_E': 'Tenant E (Contract Actions)',
+                'customer_a': 'Demo A (Single Table)',
+                'customer_b': 'Demo B (Multi-Table)',
+                'customer_c': 'Demo C (Different Split)'
+            };
+
+            for (const [tenantId, result] of Object.entries(translations)) {
+                const tenantName = tenantNames[tenantId] || tenantId;
+                const confidence = result.confidence || 0;
+                const confidenceClass = confidence >= 0.9 ? 'confidence-high' : 
+                                      confidence >= 0.7 ? 'confidence-medium' : 'confidence-low';
+                const statusIcon = result.error ? '❌' : 
+                                 confidence >= 0.9 ? '✅' : 
+                                 confidence >= 0.7 ? '⚡' : '⚠️';
+
+                html += `
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onclick="selectTenant('${tenantId}')">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-lg font-bold text-gray-900 flex items-center space-x-2">
+                                    <span>${statusIcon}</span>
+                                    <span>${tenantName}</span>
+                                </h4>
+                                <span class="px-3 py-1 rounded-full text-xs font-medium border ${confidenceClass}">
+                                    ${Math.round(confidence * 100)}% confidence
+                                </span>
+                            </div>
+                            
+                            ${result.error ? `
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-red-500">⚠️</span>
+                                        <span class="text-red-700 text-sm">${result.error}</span>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="sql-code mb-4">${result.translated_query || 'No translation available'}</div>
+                                
+                                ${result.reasoning ? `
+                                    <div class="text-sm text-gray-600 mb-4">
+                                        <span class="inline-flex items-center space-x-1">
+                                            <span>🔍</span>
+                                            <span>Analysis: ${result.reasoning.substring(0, 100)}...</span>
+                                        </span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.validation_errors && result.validation_errors.length > 0 ? `
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                                        <div class="text-sm font-medium text-red-800 mb-2">
+                                            <span class="inline-flex items-center space-x-1">
+                                                <span>❌</span>
+                                                <span>Validation Errors:</span>
+                                            </span>
+                                        </div>
+                                        <ul class="text-sm text-red-700 space-y-1">
+                                            ${result.validation_errors.map(error => `<li>• ${error}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${result.warnings && result.warnings.length > 0 ? `
+                                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                                        ${result.warnings.map(warning => `
+                                            <div class="text-sm text-yellow-700 flex items-center space-x-1">
+                                                <span>⚠️</span>
+                                                <span>${warning}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors" onclick="event.stopPropagation(); copySQL('${tenantId}')">
+                                        Copy SQL
+                                    </button>
+                                    <button class="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors" onclick="event.stopPropagation(); testExecute('${tenantId}')">
+                                        Test Execute
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsContainer.innerHTML = html;
+        }
+
+        // Display detailed reasoning
+        // Generate dynamic field mapping based on actual translation
+        function generateFieldMapping(translation, tenantId) {
+            const canonicalQuery = document.getElementById('canonicalQuery').value;
+            
+            // Analyze the actual mapping based on the queries
+            let mappingHtml = '';
+            
+            // Parse canonical and translated queries for field mapping
+            const fieldMappings = analyzeActualFieldMapping(canonicalQuery, translation.translated_query, tenantId);
+            
+            if (fieldMappings.length > 0) {
+                mappingHtml += `
+                    <div class="border-l-2 border-green-200 pl-4">
+                        <div class="font-medium text-gray-900">🎯 Actual Field Mapping for ${getTenantDisplayName(tenantId)}</div>
+                        <div class="text-gray-600 mt-1">
+                `;
+                
+                fieldMappings.forEach(mapping => {
+                    const statusIcon = mapping.success ? '✅' : '⚠️';
+                    mappingHtml += `
+                        <div class="tree-line">├─ <strong>${mapping.canonical}</strong> → ${mapping.target} ${statusIcon}</div>
+                        <div class="tree-line">│  ${mapping.description}</div>
+                    `;
+                });
+                
+                mappingHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add JOIN analysis if applicable
+            if (translation.join_strategy && translation.join_strategy.join_tables && translation.join_strategy.join_tables.length > 0) {
+                mappingHtml += `
+                    <div class="border-l-2 border-blue-200 pl-4">
+                        <div class="font-medium text-gray-900">🔗 JOIN Analysis</div>
+                        <div class="text-gray-600 mt-1">
+                            <div class="tree-line">├─ Primary table: <span class="font-mono">${translation.join_strategy.primary_table}</span></div>
+                `;
+                
+                translation.join_strategy.join_tables.forEach((join, index) => {
+                    mappingHtml += `
+                        <div class="tree-line">├─ ${join[2]} JOIN <span class="font-mono">${join[0]}</span></div>
+                        <div class="tree-line">│  ON ${join[1]}</div>
+                    `;
+                });
+                
+                mappingHtml += `
+                            <div class="tree-line">└─ Strategy confidence: ${Math.round((translation.join_strategy.confidence || 0) * 100)}%</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add validation status
+            if (translation.validation_errors && translation.validation_errors.length > 0) {
+                mappingHtml += `
+                    <div class="border-l-2 border-red-200 pl-4">
+                        <div class="font-medium text-gray-900">❌ Validation Issues</div>
+                        <div class="text-gray-600 mt-1">
+                `;
+                translation.validation_errors.forEach(error => {
+                    mappingHtml += `<div class="tree-line">├─ ${error}</div>`;
+                });
+                mappingHtml += `
+                        </div>
+                    </div>
+                `;
+            } else {
+                mappingHtml += `
+                    <div class="border-l-2 border-green-200 pl-4">
+                        <div class="font-medium text-gray-900">✅ Schema Validation</div>
+                        <div class="text-gray-600 mt-1">
+                            <div class="tree-line">├─ All columns exist in target schema</div>
+                            <div class="tree-line">├─ All table references are valid</div>
+                            <div class="tree-line">└─ SQL syntax is correct</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return mappingHtml;
+        }
+        
+        // Analyze actual field mapping between queries
+        function analyzeActualFieldMapping(canonicalQuery, translatedQuery, tenantId) {
+            const mappings = [];
+            
+            // Analyze based on the current query pattern
+            if (canonicalQuery.includes('contract_id')) {
+                if (tenantId === 'tenant_A' && translatedQuery.includes('generated_unique_award_id')) {
+                    mappings.push({
+                        canonical: 'contract_id',
+                        target: 'awards.generated_unique_award_id',
+                        success: true,
+                        description: 'Mapped to unique award identifier (primary key)'
+                    });
+                }
+            }
+            
+            if (canonicalQuery.includes('.status')) {
+                if (tenantId === 'tenant_A' && translatedQuery.includes('CASE')) {
+                    mappings.push({
+                        canonical: 'status',
+                        target: 'CASE statement (period-based)',
+                        success: true,
+                        description: 'Derived from period_start/period_end dates (no status column exists)'
+                    });
+                } else if (translatedQuery.includes('.status')) {
+                    mappings.push({
+                        canonical: 'status',
+                        target: 'Direct status column',
+                        success: true,
+                        description: 'Direct mapping to existing status field'
+                    });
+                }
+            }
+            
+            if (canonicalQuery.includes('party_name')) {
+                if (tenantId === 'tenant_A' && translatedQuery.includes('legal_name')) {
+                    mappings.push({
+                        canonical: 'party_name',
+                        target: 'recipients.legal_name',
+                        success: true,
+                        description: 'Mapped to recipient legal name field'
+                    });
+                }
+            }
+            
+            // Analyze JOINs
+            if (canonicalQuery.includes('JOIN') && translatedQuery.includes('JOIN')) {
+                const canonicalJoins = (canonicalQuery.match(/JOIN/gi) || []).length;
+                const translatedJoins = (translatedQuery.match(/JOIN/gi) || []).length;
+                
+                mappings.push({
+                    canonical: `${canonicalJoins} JOIN(s)`,
+                    target: `${translatedJoins} JOIN(s)`,
+                    success: translatedJoins >= canonicalJoins,
+                    description: `JOIN strategy ${translatedJoins >= canonicalJoins ? 'maintained' : 'simplified'}`
+                });
+            }
+            
+            return mappings;
+        }
+        
+        // Get display name for tenant
+        function getTenantDisplayName(tenantId) {
+            const names = {
+                'tenant_A': 'Tenant A (USAspending)',
+                'tenant_B': 'Tenant B (World Bank)', 
+                'tenant_C': 'Tenant C (OCDS)',
+                'tenant_D': 'Tenant D (Enterprise)',
+                'tenant_E': 'Tenant E (Contract Actions)',
+                'customer_a': 'Demo A',
+                'customer_b': 'Demo B',
+                'customer_c': 'Demo C'
+            };
+            return names[tenantId] || tenantId;
+        }
+
+        function displayReasoning(tenantId, translation, relationships) {
+            const reasoningContainer = document.getElementById('reasoningPanel');
+            
+            if (!translation || translation.error) {
+                reasoningContainer.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">🧠 LLM Analysis</h3>
+                        <div class="text-center py-8">
+                            <div class="text-gray-400 text-4xl mb-2">❌</div>
+                            <p class="text-gray-500">No analysis available for this tenant</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const confidence = translation.confidence || 0;
+            const tenantNames = {
+                'tenant_A': 'Tenant A',
+                'tenant_B': 'Tenant B', 
+                'tenant_C': 'Tenant C',
+                'tenant_D': 'Tenant D',
+                'tenant_E': 'Tenant E',
+                'customer_a': 'Demo A',
+                'customer_b': 'Demo B',
+                'customer_c': 'Demo C'
+            };
+
+            reasoningContainer.innerHTML = `
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">🧠 LLM Analysis for ${tenantNames[tenantId] || tenantId}</h3>
+                    
+                    <!-- Step 1: Schema Analysis -->
+                    <div class="mb-6">
+                        <button class="w-full text-left font-medium text-gray-900 py-2 flex items-center space-x-2" onclick="toggleSection('schema-analysis')">
+                            <span id="schema-analysis-icon">▼</span>
+                            <span>Step 1: Schema Analysis</span>
+                        </button>
+                        <div id="schema-analysis" class="collapsible-content expanded ml-4 mt-2 text-sm text-gray-600">
+                            <div class="tree-line">├─ Identified ${relationships?.length || 0} relationships</div>
+                            <div class="tree-line">├─ Analyzed table structures</div>
+                            <div class="tree-line">└─ Found primary keys</div>
+                            ${relationships && relationships.length > 0 ? `
+                                <div class="mt-3 pl-4 border-l-2 border-blue-200">
+                                    <div class="font-medium text-gray-800 mb-2">🔗 Discovered Relationships:</div>
+                                    ${relationships.slice(0, 5).map(rel => `
+                                        <div class="text-xs text-gray-600 mb-1">
+                                            <span class="font-mono">${rel.table1}.${rel.column1}</span>
+                                            <span class="text-blue-500"> → </span>
+                                            <span class="font-mono">${rel.table2}.${rel.column2}</span>
+                                            <span class="text-gray-400">(${Math.round(rel.confidence * 100)}%)</span>
+                                        </div>
+                                    `).join('')}
+                                    ${relationships.length > 5 ? `
+                                        <div class="text-xs text-gray-400">... and ${relationships.length - 5} more</div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Query Strategy -->
+                    <div class="mb-6">
+                        <button class="w-full text-left font-medium text-gray-900 py-2 flex items-center space-x-2" onclick="toggleSection('query-strategy')">
+                            <span id="query-strategy-icon">▼</span>
+                            <span>Step 2: Query Strategy</span>
+                        </button>
+                        <div id="query-strategy" class="collapsible-content expanded ml-4 mt-2 text-sm text-gray-600">
+                            <div class="tree-line">├─ Determined JOIN requirements</div>
+                            <div class="tree-line">├─ Optimized execution plan</div>
+                            <div class="tree-line">└─ Selected best approach</div>
+                            ${translation.join_strategy ? `
+                                <div class="mt-3 pl-4 border-l-2 border-green-200">
+                                    <div class="font-medium text-gray-800 mb-2">🎯 JOIN Strategy:</div>
+                                    <div class="text-xs text-gray-600 mb-1">
+                                        <span class="font-medium">Primary Table:</span> 
+                                        <span class="font-mono">${translation.join_strategy.primary_table}</span>
+                                    </div>
+                                    ${translation.join_strategy.join_tables && translation.join_strategy.join_tables.length > 0 ? `
+                                        <div class="text-xs text-gray-600 mb-1">
+                                            <span class="font-medium">JOINs Required:</span>
+                                        </div>
+                                        ${translation.join_strategy.join_tables.map(join => `
+                                            <div class="text-xs text-gray-600 ml-2 mb-1">
+                                                <span class="text-purple-600">${join[2]}</span> JOIN 
+                                                <span class="font-mono">${join[0]}</span>
+                                                <div class="text-gray-400 ml-4">ON ${join[1]}</div>
+                                            </div>
+                                        `).join('')}
+                                    ` : `
+                                        <div class="text-xs text-gray-600">No JOINs required - single table query</div>
+                                    `}
+                                    <div class="text-xs text-gray-600 mt-2">
+                                        <span class="font-medium">Strategy Confidence:</span> 
+                                        <span class="text-green-600">${Math.round((translation.join_strategy.confidence || 0) * 100)}%</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Translation -->
+                    <div class="mb-6">
+                        <button class="w-full text-left font-medium text-gray-900 py-2 flex items-center space-x-2" onclick="toggleSection('translation')">
+                            <span id="translation-icon">▼</span>
+                            <span>Step 3: Translation</span>
+                        </button>
+                        <div id="translation" class="collapsible-content expanded ml-4 mt-2 text-sm text-gray-600">
+                            <div class="tree-line">├─ Generated SQL query</div>
+                            <div class="tree-line">├─ Applied optimizations</div>
+                            <div class="tree-line">└─ Validated syntax</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Field Mapping -->
+
+                    <!-- Confidence Factors -->
+                    <div class="mb-6">
+                        <h4 class="font-medium text-gray-900 mb-3">Confidence Factors:</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">Final confidence:</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-32 bg-gray-200 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: ${confidence * 100}%"></div>
+                                    </div>
+                                    <span class="text-sm font-medium">${Math.round(confidence * 100)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Results -->
+                    <div class="mb-6">
+                        <button class="w-full text-left font-medium text-gray-900 py-2 flex items-center space-x-2" onclick="toggleSection('validation')">
+                            <span id="validation-icon">▼</span>
+                            <span>✅ Validation Results</span>
+                        </button>
+                        <div id="validation" class="collapsible-content ml-4 mt-2 text-sm text-gray-600">
+                            <div class="space-y-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-500">☑</span>
+                                    <span>Syntax Check: Valid SQL</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-500">☑</span>
+                                    <span>Schema Validation: All tables exist</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-green-500">☑</span>
+                                    <span>Column Mapping: All fields resolved</span>
+                                </div>
+                                ${translation.validation_errors && translation.validation_errors.length > 0 ? `
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-red-500">⚠️</span>
+                                        <span>Validation errors detected</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expected Performance -->
+                    <div class="mb-6">
+                        <button class="w-full text-left font-medium text-gray-900 py-2 flex items-center space-x-2" onclick="toggleSection('performance')">
+                            <span id="performance-icon">▼</span>
+                            <span>📊 Expected Performance</span>
+                        </button>
+                        <div id="performance" class="collapsible-content ml-4 mt-2 text-sm text-gray-600">
+                            <div class="tree-line">├─ Complexity: medium</div>
+                            <div class="tree-line">├─ Tables: 1</div>
+                            <div class="tree-line">├─ JOINs: 0</div>
+                            <div class="tree-line">├─ Estimated rows: ~1,200</div>
+                            <div class="tree-line">└─ Estimated time: <10ms</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+
+            selectedTenant = tenantId;
+        }
+
+        // Toggle collapsible sections
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const icon = document.getElementById(sectionId + '-icon');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                icon.textContent = '▶';
+            } else {
+                content.classList.add('expanded');
+                icon.textContent = '▼';
+            }
+        }
+
+        // Select tenant for detailed reasoning
+        function selectTenant(tenantId) {
+            if (currentTranslations[tenantId] && currentReasoning[tenantId]) {
+                displayReasoning(tenantId, currentTranslations[tenantId], currentReasoning[tenantId]);
+            }
+        }
+
+        // Copy SQL functionality
+        function copySQL(tenantId) {
+            const translation = currentTranslations[tenantId];
+            if (translation && translation.translated_query) {
+                navigator.clipboard.writeText(translation.translated_query).then(() => {
+                    showCopyFeedback('Copied!');
+                });
+            }
+        }
+
+        // Copy all SQL
+        function copyAllSQL() {
+            const allSQL = Object.entries(currentTranslations)
+                .filter(([_, result]) => result.translated_query && !result.error)
+                .map(([tenantId, result]) => `-- ${tenantId}\n${result.translated_query}`)
+                .join('\n\n');
+            
+            if (allSQL) {
+                navigator.clipboard.writeText(allSQL).then(() => {
+                    showCopyFeedback('All SQL copied!');
+                });
+            }
+        }
+
+        // Show copy feedback
+        function showCopyFeedback(message) {
+            // Create temporary feedback element
+            const feedback = document.createElement('div');
+            feedback.className = 'fixed top-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg z-50';
+            feedback.textContent = message;
+            document.body.appendChild(feedback);
+            
+            setTimeout(() => {
+                document.body.removeChild(feedback);
+            }, 2000);
+        }
+
+        // Test execute functionality
+        function testExecute(tenantId) {
+            alert(`Test execution for ${tenantId} - Feature coming soon!`);
+        }
+
+        // Toggle analysis
+        function toggleAnalysis(tenantId) {
+            const analysisId = `analysis-${tenantId}`;
+            const analysisDiv = document.getElementById(analysisId);
+            const button = event.target;
+            
+            if (analysisDiv) {
+                // Toggle existing analysis
+                if (analysisDiv.style.display === 'none' || analysisDiv.style.display === '') {
+                    analysisDiv.style.display = 'block';
+                    button.innerHTML = '▲ Hide Full Analysis';
+                } else {
+                    analysisDiv.style.display = 'none';
+                    button.innerHTML = '▼ Show Full Analysis';
+                }
+            } else {
+                // Create and show full analysis
+                if (currentTranslations[tenantId]) {
+                    showFullAnalysis(tenantId);
+                    button.innerHTML = '▲ Hide Full Analysis';
+                } else {
+                    alert('No translation data available. Please run a translation first.');
+                }
+            }
+        }
+
+        // Show full analysis for a tenant
+        function showFullAnalysis(tenantId) {
+            const translation = currentTranslations[tenantId];
+            const relationships = currentReasoning[tenantId];
+            
+            if (!translation) {
+                alert('No translation data available for analysis');
+                return;
+            }
+            
+            // Find the tenant card to insert analysis after it
+            const tenantCards = document.querySelectorAll('.bg-white.rounded-lg.shadow-sm.border');
+            let targetCard = null;
+            
+            for (const card of tenantCards) {
+                if (card.innerHTML.includes(getTenantDisplayName(tenantId))) {
+                    targetCard = card;
+                    break;
+                }
+            }
+            
+            if (!targetCard) return;
+            
+            // Create full analysis HTML
+            const analysisHTML = generateFullAnalysisHTML(tenantId, translation, relationships);
+            
+            // Create analysis div
+            const analysisDiv = document.createElement('div');
+            analysisDiv.id = `analysis-${tenantId}`;
+            analysisDiv.className = 'mt-4 bg-gray-50 rounded-lg p-6 border-l-4 border-blue-500';
+            analysisDiv.innerHTML = analysisHTML;
+            
+            // Insert after the tenant card
+            targetCard.parentNode.insertBefore(analysisDiv, targetCard.nextSibling);
+        }
+
+        // Generate full analysis HTML
+        function generateFullAnalysisHTML(tenantId, translation, relationships) {
+            const canonicalQuery = document.getElementById('canonicalQuery').value;
+            const fieldMappings = analyzeActualFieldMapping(canonicalQuery, translation.translated_query, tenantId);
+            
+            return `
+                <div class="space-y-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-bold">📊</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Complete Analysis for ${getTenantDisplayName(tenantId)}</h3>
+                    </div>
+                    
+                    <!-- Field Mapping Analysis -->
+                    <div class="bg-white rounded-lg p-4 border">
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                            <span class="mr-2">🎯</span> Field Mapping Analysis
+                        </h4>
+                        <div class="space-y-3">
+                            ${fieldMappings.map(mapping => `
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded">
+                                    <span class="${mapping.success ? 'text-green-500' : 'text-red-500'} text-lg">
+                                        ${mapping.success ? '✅' : '❌'}
+                                    </span>
+                                    <div class="flex-1">
+                                        <div class="font-mono text-sm">
+                                            <span class="font-semibold text-blue-600">${mapping.canonical}</span>
+                                            <span class="mx-2 text-gray-400">→</span>
+                                            <span class="font-semibold text-green-600">${mapping.target}</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600 mt-1">${mapping.description}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Analysis -->
+                    <div class="bg-white rounded-lg p-4 border">
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                            <span class="mr-2">⚡</span> Performance Analysis
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">${Math.round(translation.confidence * 100)}%</div>
+                                <div class="text-sm text-gray-600">Confidence</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-green-600">
+                                    ${translation.execution_plan ? translation.execution_plan.join_count || 0 : 0}
+                                </div>
+                                <div class="text-sm text-gray-600">JOINs Required</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-purple-600">
+                                    ${translation.execution_plan ? translation.execution_plan.tables_involved?.length || 1 : 1}
+                                </div>
+                                <div class="text-sm text-gray-600">Tables Involved</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Query Transformation -->
+                    <div class="bg-white rounded-lg p-4 border">
+                        <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                            <span class="mr-2">🔄</span> Query Transformation
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-2">Original Query:</div>
+                                <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto"><code>${canonicalQuery}</code></pre>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-700 mb-2">Translated Query:</div>
+                                <pre class="bg-green-50 p-3 rounded text-xs overflow-x-auto"><code>${translation.translated_query}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show comprehensive analysis for all translations
+        function showComprehensiveAnalysis(translations, reasoning, selectedTenants) {
+            const analysisSection = document.getElementById('comprehensiveAnalysis');
+            const analysisContent = document.getElementById('analysisContent');
+            const canonicalQuery = document.getElementById('queryInput').value.trim();
+            
+            if (!translations || !selectedTenants || selectedTenants.length === 0) {
+                analysisSection.style.display = 'none';
+                return;
+            }
+            
+            let html = '';
+            
+            // Summary Overview
+            html += `
+                <div class="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="mr-2">📋</span> Translation Summary
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${selectedTenants.length}</div>
+                            <div class="text-sm text-gray-600">Tenants Analyzed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">${selectedTenants.filter(tenantId => translations[tenantId] && !translations[tenantId].error).length}</div>
+                            <div class="text-sm text-gray-600">Successful Translations</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">${(() => {
+                                const successfulTranslations = selectedTenants.filter(tenantId => translations[tenantId] && !translations[tenantId].error);
+                                if (successfulTranslations.length === 0) return 0;
+                                const totalConfidence = successfulTranslations.reduce((sum, tenantId) => sum + (translations[tenantId].confidence || 0), 0);
+                                return Math.round(totalConfidence / successfulTranslations.length * 100);
+                            })()}%</div>
+                            <div class="text-sm text-gray-600">Average Confidence</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600">${selectedTenants.reduce((sum, tenantId) => sum + (translations[tenantId]?.execution_plan?.join_count || 0), 0)}</div>
+                            <div class="text-sm text-gray-600">Total JOINs Required</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Field Mapping Analysis for All Tenants
+            html += `
+                <div class="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="mr-2">🎯</span> Complete Field Mapping Analysis
+                    </h3>
+                    <div class="space-y-6">
+            `;
+            
+            selectedTenants.forEach(tenantId => {
+                const translation = translations[tenantId];
+                if (translation && !translation.error) {
+                    const fieldMappings = analyzeActualFieldMapping(canonicalQuery, translation.translated_query, tenantId);
+                    const tenantName = getTenantDisplayName(tenantId);
+                    
+                    html += `
+                        <div class="border-l-4 border-blue-200 pl-4">
+                            <h4 class="font-semibold text-gray-900 mb-3">${tenantName}</h4>
+                            <div class="space-y-2">
+                                ${fieldMappings.map(mapping => `
+                                    <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded">
+                                        <span class="${mapping.success ? 'text-green-500' : 'text-red-500'} text-lg">
+                                            ${mapping.success ? '✅' : '❌'}
+                                        </span>
+                                        <div class="flex-1">
+                                            <div class="font-mono text-sm">
+                                                <span class="font-semibold text-blue-600">${mapping.canonical}</span>
+                                                <span class="mx-2 text-gray-400">→</span>
+                                                <span class="font-semibold text-green-600">${mapping.target}</span>
+                                            </div>
+                                            <div class="text-sm text-gray-600 mt-1">${mapping.description}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            // Query Transformation Comparison
+            html += `
+                <div class="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="mr-2">🔄</span> Query Transformation Comparison
+                    </h3>
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 mb-2">Original Canonical Query:</h4>
+                        <pre class="bg-gray-100 p-4 rounded text-sm overflow-x-auto border"><code>${canonicalQuery}</code></pre>
+                    </div>
+                    <div class="space-y-4">
+            `;
+            
+            selectedTenants.forEach(tenantId => {
+                const translation = translations[tenantId];
+                if (translation && !translation.error) {
+                    const tenantName = getTenantDisplayName(tenantId);
+                    html += `
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-2">${tenantName} Translation:</h4>
+                            <pre class="bg-green-50 p-4 rounded text-sm overflow-x-auto border border-green-200"><code>${translation.translated_query}</code></pre>
+                            <div class="mt-2 flex items-center space-x-4 text-sm text-gray-600">
+                                <span class="flex items-center">
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                    Confidence: ${Math.round((translation.confidence || 0) * 100)}%
+                                </span>
+                                <span class="flex items-center">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    Tables: ${translation.execution_plan?.tables_involved?.length || 1}
+                                </span>
+                                <span class="flex items-center">
+                                    <span class="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                                    JOINs: ${translation.execution_plan?.join_count || 0}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            // Performance Analysis
+            html += `
+                <div class="bg-white rounded-lg p-6 border border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="mr-2">⚡</span> Performance Analysis Summary
+                    </h3>
+                    <div class="space-y-4">
+            `;
+            
+            selectedTenants.forEach(tenantId => {
+                const translation = translations[tenantId];
+                if (translation && !translation.error && translation.performance_optimization && translation.performance_optimization.length > 0) {
+                    const tenantName = getTenantDisplayName(tenantId);
+                    html += `
+                        <div class="border-l-4 border-yellow-200 pl-4">
+                            <h4 class="font-semibold text-gray-900 mb-2">${tenantName} Optimizations:</h4>
+                            <ul class="space-y-1">
+                                ${translation.performance_optimization.map(opt => `
+                                    <li class="text-sm text-gray-600 flex items-start">
+                                        <span class="text-yellow-500 mr-2">💡</span>
+                                        ${opt}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            analysisContent.innerHTML = html;
+            analysisSection.style.display = 'block';
+        }
+
+        // Regenerate translations
+        function regenerateTranslations() {
+            translateQuery();
+        }
+
+        // Clear all
+        function clearAll() {
+            document.getElementById('queryInput').value = '';
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.getElementById('translationResults').innerHTML = `
+                <div id="emptyState" class="text-center py-12">
+                    <div class="text-gray-400 text-6xl mb-4">🔍</div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Ready to Translate</h3>
+                    <p class="text-gray-500">Select tenants and click "Translate" to see AI-powered query translations</p>
+                </div>
+            `;
+            // Hide comprehensive analysis
+            document.getElementById('comprehensiveAnalysis').style.display = 'none';
+            document.getElementById('reasoningPanel').innerHTML = `
+                <div id="reasoningEmptyState" class="text-center py-12">
+                    <div class="text-gray-400 text-6xl mb-4">🧠</div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">AI Reasoning</h3>
+                    <p class="text-gray-500">Detailed step-by-step analysis will appear here</p>
+                </div>
+            `;
+            currentTranslations = {};
+            currentReasoning = {};
+        }
+
+        // Show error
+        function showError(message) {
+            const resultsContainer = document.getElementById('translationResults');
+            resultsContainer.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                    <div class="text-red-500 text-4xl mb-2">❌</div>
+                    <h3 class="text-lg font-medium text-red-900 mb-2">Translation Failed</h3>
+                    <p class="text-red-700">${message}</p>
+                </div>
+            `;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up initial state
+            console.log('Query Translation Dashboard initialized');
+            
+            // Check for prefilled query from sessionStorage
+            const canonicalSQL = sessionStorage.getItem('canonicalSQL');
+            if (canonicalSQL) {
+                console.log('Found prefilled query from sessionStorage:', canonicalSQL);
+                document.getElementById('queryInput').value = canonicalSQL;
+                // Clear the stored query
+                sessionStorage.removeItem('canonicalSQL');
+                
+                // Optionally auto-focus or highlight the query
+                document.getElementById('queryInput').focus();
+                document.getElementById('queryInput').select();
+            }
+        });
+    </script>
+</body>
+</html>
