@@ -1,5 +1,6 @@
 flask==2.3.3
 gunicorn==21.2.0
+gevent==24.2.1
 duckdb==1.4.0
 openai==1.108.1
 pandas==2.2.3
