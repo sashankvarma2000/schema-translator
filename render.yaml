@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: schema-translator
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web_dashboard.py
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PORT
+        value: 8080
+      - key: PYTHON_VERSION
+        value: 3.11.4
+

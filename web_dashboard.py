@@ -2648,12 +2648,17 @@ if __name__ == '__main__':
     templates_dir = Path("templates")
     templates_dir.mkdir(exist_ok=True)
     
+    # Support deployment platforms (Render, Railway, etc.)
+    import os
+    port = int(os.environ.get('PORT', 8080))
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
     print("🌐 Starting Schema Translator Web Dashboard...")
-    print("Dashboard will be available at: http://localhost:8080")
+    print(f"Dashboard will be available at: http://0.0.0.0:{port}")
     print("Features:")
     print("• Interactive testing interface")
     print("• HITL workflow demonstration")
     print("• Reports and analytics")
     print("• Real-time API status")
     
-    app.run(debug=True, host='0.0.0.0', port=8082)
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
