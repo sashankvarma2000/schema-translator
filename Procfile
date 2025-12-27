@@ -1,2 +1,2 @@
-web: gunicorn --bind 0.0.0.0:$PORT web_dashboard:app
+web: gunicorn --config gunicorn_config.py web_dashboard:app
 
