@@ -2,6 +2,10 @@
 
 **LLM-Powered Multi-Tenant Query Translation System**
 
+[![GitHub](https://img.shields.io/badge/GitHub-sashankvarma2000-blue)](https://github.com/sashankvarma2000/schema-translator)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+
 A sophisticated AI-powered system that translates standardized SQL queries across heterogeneous database schemas, enabling unified data access across multiple tenants with different data structures.
 
 ---
@@ -332,7 +336,7 @@ LIMIT 10
 - **Python 3.11+** - Core language
 - **Flask** - Web framework for dashboard
 - **FastAPI** - REST API server (optional)
-- **OpenAI GPT-4o-mini** - LLM for semantic understanding
+- **OpenAI GPT-5.2** - LLM for semantic understanding
 - **DuckDB** - Embedded SQL database for query execution
 - **PyYAML** - Schema parsing
 - **Server-Sent Events (SSE)** - Real-time progress updates
@@ -362,15 +366,15 @@ LIMIT 10
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd girish
+git clone https://github.com/sashankvarma2000/schema-translator.git
+cd schema-translator
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Set up environment variables
-export OPENAI_API_KEY="your-api-key-here"
-# OR create .env file:
+cp .env.example .env
+# Edit .env and add your OpenAI API key:
 # OPENAI_API_KEY=your-api-key-here
 ```
 
@@ -531,7 +535,7 @@ Defines the standard schema that all queries use:
 OPENAI_API_KEY=your-api-key-here
 
 # Optional overrides
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5.2
 AUTO_ACCEPT_THRESHOLD=0.75
 HITL_THRESHOLD=0.5
 ```
@@ -603,28 +607,17 @@ python -c "from src.app.core.query_translator import QueryTranslationEngine; ...
 
 ---
 
-## 📚 Documentation
+## 🌟 Star History
 
-- **`COMPLETE_SYSTEM_FLOW.md`** - Detailed system architecture and flow
-- **`SETUP_GUIDE.md`** - Step-by-step setup instructions
-- **`DEMO_QUERIES.md`** - Example queries for testing
-- **`DEMO_READY.md`** - Demo preparation checklist
+If you find this project useful, please consider giving it a ⭐ on GitHub!
 
----
+## 📊 Project Stats
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
----
-
-## 📝 License
-
-MIT License - see LICENSE file for details.
+- **Lines of Code**: 32,000+
+- **Python Files**: 33
+- **Total Files**: 78+
+- **Supported Tenants**: 5+ (easily extensible)
+- **Model**: GPT-5.2 (OpenAI)
 
 ---
 
@@ -643,6 +636,68 @@ The **Schema Translator** is a production-ready system that:
 
 ---
 
-**Last Updated**: 2025  
+**Last Updated**: December 2025  
 **Version**: 3.0.0  
-**Status**: ✅ Production Ready
+**Status**: ✅ Production Ready  
+**Repository**: [https://github.com/sashankvarma2000/schema-translator](https://github.com/sashankvarma2000/schema-translator)
+
+## 📚 Additional Documentation
+
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed setup instructions
+- **[COMPLETE_SYSTEM_FLOW.md](COMPLETE_SYSTEM_FLOW.md)** - Complete system architecture
+- **[DEMO_QUERIES.md](DEMO_QUERIES.md)** - Example queries for testing
+- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Project organization
+- **[GITHUB_PUSH_STEPS.md](GITHUB_PUSH_STEPS.md)** - GitHub upload guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👤 Author
+
+**sashankvarma2000**
+
+- GitHub: [@sashankvarma2000](https://github.com/sashankvarma2000)
+- Repository: [schema-translator](https://github.com/sashankvarma2000/schema-translator)
+
+## 🙏 Acknowledgments
+
+- OpenAI for GPT-5.2 API
+- DuckDB for embedded database capabilities
+- Flask community for the web framework  
+**Repository**: [https://github.com/sashankvarma2000/schema-translator](https://github.com/sashankvarma2000/schema-translator)
+
+## 📚 Additional Documentation
+
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed setup instructions
+- **[COMPLETE_SYSTEM_FLOW.md](COMPLETE_SYSTEM_FLOW.md)** - Complete system architecture
+- **[DEMO_QUERIES.md](DEMO_QUERIES.md)** - Example queries for testing
+- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Project organization
+- **[GITHUB_PUSH_STEPS.md](GITHUB_PUSH_STEPS.md)** - GitHub upload guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👤 Author
+
+**sashankvarma2000**
+
+- GitHub: [@sashankvarma2000](https://github.com/sashankvarma2000)
+- Repository: [schema-translator](https://github.com/sashankvarma2000/schema-translator)
+
+## 🙏 Acknowledgments
+
+- OpenAI for GPT-5.2 API
+- DuckDB for embedded database capabilities
+- Flask community for the web framework
